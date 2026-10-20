@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Boat River Race</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Poppins:wght@400;600;800&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .asian-title {
+            font-family: 'Cinzel', serif;
+            text-shadow: 0 0 10px rgba(234, 179, 8, 0.5), 0 0 20px rgba(220, 38, 38, 0.5);
+        }
+
+        .gold-gradient-text {
+            background: linear-gradient(135deg, #fef08a 0%, #eab308 50%, #ca8a04 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .red-gold-card {
+            background: rgba(15, 23, 42, 0.85);
+            border: 2px solid #ca8a04;
+            box-shadow: 0 0 25px rgba(220, 38, 38, 0.25), inset 0 0 15px rgba(234, 179, 8, 0.15);
+        }
+
+        /* Rhythm Bar Animation */
+        .rhythm-pulse {
+            animation: pulse-ring 1.2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0.8; }
+        }
+
+        canvas {
+            display: block;
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center relative overflow-hidden bg-slate-950">
+
+    <div id="game-container" class="relative w-full h-full max-w-4xl max-h-[900px] flex items-center justify-center overflow-hidden shadow-2xl">
+        <canvas id="gameCanvas" class="w-full h-full rounded-none md:rounded-xl shadow-2xl border-0 md:border-2 border-yellow-600/40"></canvas>
+
+        <div id="hud" class="absolute inset-0 pointer-events-none p-4 flex flex-col justify-between hidden">
+            <!-- Top Bar HUD -->
+            <div class="flex justify-between items-start w-full">
+                <!-- Health & Distance -->
+                <div class="flex flex-col gap-2 bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-amber-500/40 shadow-lg min-w-[160px]">
+                    <div class="flex items-center justify-between text-xs font-bold text-amber-300 uppercase tracking-wider">
+                        <span><i class="fa-solid fa-shield-halved mr-1"></i> Integrity</span>
+                        <span id="health-text">100%</span>
+                    </div>
+                    <div class="w-full bg-slate-950 rounded-full h-3.5 border border-amber-500/30 overflow-hidden">
+                        <div id="health-bar" class="bg-gradient-to-r from-red-600 to-emerald-500 h-full rounded-full transition-all duration-300" style="width: 100%;"></div>
+                    </div>
+
+                    <div class="flex justify-between items-center mt-1">
+                        <span class="text-xs text-slate-400 font-semibold"><i class="fa-solid fa-route text-amber-400 mr-1"></i> Distance</span>
+                        <span id="distance-val" class="text-lg font-black text-white">0 <span class="text-xs font-normal text-amber-400">m</span></span>
+                    </div>
+                </div>
+
+                <!-- Score & Speed -->
+                <div class="flex flex-col items-end gap-1 bg-slate-900/80 backdrop-blur-md p-3 rounded-xl border border-amber-500/40 shadow-lg min-w-[150px]">
+                    <div class="text-xs text-amber-400 uppercase font-bold tracking-wider"><i class="fa-solid fa-trophy mr-1"></i> Score</div>
+                    <div id="score-val" class="text-2xl font-black text-amber-300 tracking-wider">000000</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-xs text-slate-400"><i class="fa-solid fa-gauge-high text-yellow-500 mr-1"></i> Speed</span>
+                        <span id="speed-val" class="text-sm font-bold text-emerald-400">0.0 km/h</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Rhythm & Control Overlay -->
+            <div class="flex flex-col items-center mb-2 w-full max-w-md mx-auto">
+                <!-- Rhythm Drummer Target Visualizer -->
+                <div class="relative w-full bg-slate-900/90 backdrop-blur-md border-2 border-amber-500/60 rounded-2xl p-3 shadow-2xl flex flex-col items-center">
+                    <div class="text-xs font-bold text-amber-300 uppercase tracking-widest mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-drum text-red-500 animate-bounce"></i>
+                        <span>Drum Beat Rhythm</span>
+                        <i class="fa-solid fa-drum text-red-500 animate-bounce"></i>
+                    </div>
+
+                    <!-- Rhythm Bar Container -->
+                    <div id="rhythm-track" class="relative w-full h-10 bg-slate-950 rounded-xl border border-amber-500/30 overflow-hidden flex items-center justify-center">
+                        <!-- Hit Target Zone Center -->
+                        <div class="absolute w-12 h-full bg-amber-500/30 border-x-2 border-amber-400 flex items-center justify-center">
+                            <div class="w-2 h-full bg-amber-300 shadow-[0_0_10px_#fef08a]"></div>
+                        </div>
+                        <!-- Expanding Ring/Marker -->
+                        <div id="rhythm-marker" class="absolute w-8 h-8 rounded-full border-4 border-red-500 bg-yellow-400 shadow-[0_0_15px_#ef4444]"></div>
+                    </div>
+
+                    <!-- Rhythm Feedback Text -->
+                    <div id="rhythm-feedback" class="h-5 text-xs font-black uppercase tracking-widest mt-1 text-emerald-400 transition-all">
+                        Hit Space/Tap on Beat!
+                    </div>
+                </div>
+
+                <!-- Touch Control Buttons (Visible on Touch/Mobile) -->
+                <div class="flex justify-between w-full mt-3 pointer-events-auto md:hidden px-4">
+                    <button id="btn-left" class="w-16 h-16 bg-red-800/80 active:bg-red-600 border-2 border-amber-400 rounded-full text-white text-2xl flex items-center justify-center shadow-lg active:scale-95">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <button id="btn-drum" class="w-20 h-20 bg-amber-600/90 active:bg-yellow-500 border-4 border-yellow-300 rounded-full text-white text-xl font-bold flex flex-col items-center justify-center shadow-2xl active:scale-95">
+                        <i class="fa-solid fa-drum text-2xl"></i>
+                        <span class="text-[10px] uppercase font-black">BEAT</span>
+                    </button>
+                    <button id="btn-right" class="w-16 h-16 bg-red-800/80 active:bg-red-600 border-2 border-amber-400 rounded-full text-white text-2xl flex items-center justify-center shadow-lg active:scale-95">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="start-screen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20">
+            <div class="red-gold-card p-8 rounded-3xl max-w-lg w-full flex flex-col items-center border-2 border-amber-500/50 shadow-2xl">
+                <!-- Dragon Logo / Header -->
+                <div class="text-6xl text-amber-400 mb-2">🐉</div>
+                <h1 class="asian-title text-4xl sm:text-5xl font-black gold-gradient-text tracking-wide mb-1">
+                    DRAGON BOAT
+                </h1>
+                <p class="text-xs uppercase tracking-[0.3em] text-red-400 font-bold mb-6">River Race Festival</p>
+
+                <!-- Instructions -->
+                <div class="bg-slate-900/90 p-4 rounded-xl border border-amber-500/30 text-left text-xs sm:text-sm space-y-2 mb-6 w-full text-slate-300">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-amber-500/20 text-amber-300 p-2 rounded-lg font-bold border border-amber-500/40">A/D or ⬅️ ➡️</span>
+                        <span>Steer boat left/right to dodge logs & rocks.</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="bg-red-500/20 text-red-300 p-2 rounded-lg font-bold border border-red-500/40">SPACE / TAP</span>
+                        <span>Hit the drum on beat to speed up paddlers!</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="bg-emerald-500/20 text-emerald-300 p-2 rounded-lg font-bold border border-emerald-500/40">GEMS / ZONGZI</span>
+                        <span>Collect Rice Dumplings & Lanterns for speed and points.</span>
+                    </div>
+                </div>
+
+                <!-- High Score Badge -->
+                <div class="text-xs font-semibold text-amber-400 mb-6 bg-amber-950/40 px-4 py-1.5 rounded-full border border-amber-500/30">
+                    <i class="fa-solid fa-crown mr-1"></i> Best Score: <span id="high-score-start">0</span>
+                </div>
+
+                <!-- Play Button -->
+                <button id="start-btn" class="w-full py-4 bg-gradient-to-r from-red-700 via-red-600 to-amber-600 hover:from-red-600 hover:to-amber-500 text-white font-black text-xl rounded-2xl shadow-lg shadow-red-900/50 hover:shadow-red-600/50 transition-all transform hover:-translate-y-0.5 active:translate-y-0 uppercase tracking-wider border border-amber-300/40">
+                    Start Festival Race
+                </button>
+            </div>
+        </div>
+
+        <div id="game-over-screen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 hidden">
+            <div class="red-gold-card p-8 rounded-3xl max-w-md w-full flex flex-col items-center border-2 border-red-500/60 shadow-2xl">
+                <div class="text-5xl text-red-500 mb-2"><i class="fa-solid fa-skull-crossbones"></i></div>
+                <h2 class="asian-title text-3xl font-black text-red-500 tracking-wide mb-1">Race Concluded</h2>
+                <p id="game-over-reason" class="text-xs text-slate-400 mb-6">Your dragon boat suffered critical damage!</p>
+
+                <div class="w-full bg-slate-900/80 p-4 rounded-xl border border-amber-500/30 space-y-3 mb-6">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-400">Distance Travelled:</span>
+                        <span id="go-distance" class="font-bold text-white">0 m</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-400">Rhythm Accuracy:</span>
+                        <span id="go-accuracy" class="font-bold text-emerald-400">0%</span>
+                    </div>
+                    <div class="h-px bg-amber-500/20 my-2"></div>
+                    <div class="flex justify-between items-center text-lg font-black">
+                        <span class="text-amber-400">Final Score:</span>
+                        <span id="go-score" class="text-amber-300">0</span>
+                    </div>
+                </div>
+
+                <button id="restart-btn" class="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xl rounded-2xl shadow-lg shadow-emerald-900/50 transition-all transform hover:-translate-y-0.5 uppercase tracking-wider border border-emerald-300/40">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> Race Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // Synthesize Deep Traditional Chinese Drum Beat
+            playDrum(perfect = false) {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                
+                // Bass Oscillator
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(perfect ? 140 : 100, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.35);
+                
+                gain.gain.setValueAtTime(perfect ? 1.0 : 0.7, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.35);
+
+                // Add rim/impact click
+                const clickOsc = this.ctx.createOscillator();
+                const clickGain = this.ctx.createGain();
+                clickOsc.type = 'triangle';
+                clickOsc.frequency.setValueAtTime(perfect ? 350 : 220, now);
+                clickOsc.frequency.exponentialRampToValueAtTime(50, now + 0.08);
+
+                clickGain.gain.setValueAtTime(0.4, now);
+                clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                clickOsc.connect(clickGain);
+                clickGain.connect(this.ctx.destination);
+
+                clickOsc.start(now);
+                clickOsc.stop(now + 0.08);
+            }
+
+            // Splash sound effect for water paddling / collection
+            playSplash() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const bufferSize = this.ctx.sampleRate * 0.15;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(800, now);
+                filter.Q.setValueAtTime(3, now);
+
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                noise.start(now);
+            }
+
+            // Powerup/Pickup sound
+            playPowerup() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            // Collision/Damage sound
+            playCrash() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(120, now);
+                osc.frequency.linearRampToValueAtTime(40, now + 0.3);
+
+                gain.gain.setValueAtTime(0.6, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State Variables
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let score = 0;
+        let distance = 0;
+        let health = 100;
+        let speed = 4;
+        const BASE_SPEED = 4;
+        const MAX_SPEED = 12;
+        let highScore = localStorage.getItem('dragon_boat_highscore') || 0;
+
+        // Rhythm System Variables
+        let beatInterval = 1200; // ms per beat
+        let lastBeatTime = 0;
+        let beatProgress = 0; // 0 to 1
+        let totalBeats = 0;
+        let successfulBeats = 0;
+
+        // Player Controls
+        const keys = { left: false, right: false };
+
+        // Entities arrays
+        let obstacles = [];
+        let items = [];
+        let particles = [];
+        let riverbanks = [];
+        let spectators = [];
+        let bridges = [];
+
+        // Dragon Boat Object Definition
+        const boat = {
+            x: 0,
+            y: 0,
+            width: 44,
+            height: 120,
+            speedX: 0,
+            paddleAngle: 0,
+            paddleDir: 1
+        };
+
+        // UI Element References
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const hud = document.getElementById('hud');
+        const healthBar = document.getElementById('health-bar');
+        const healthText = document.getElementById('health-text');
+        const scoreVal = document.getElementById('score-val');
+        const distanceVal = document.getElementById('distance-val');
+        const speedVal = document.getElementById('speed-val');
+        const rhythmMarker = document.getElementById('rhythm-marker');
+        const rhythmFeedback = document.getElementById('rhythm-feedback');
+        const highScoreStart = document.getElementById('high-score-start');
+
+        highScoreStart.innerText = highScore;
+
+        function resizeCanvas() {
+            const container = document.getElementById('game-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            boat.x = canvas.width / 2;
+            boat.y = canvas.height * 0.75;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                handleDrumBeat();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+        });
+
+        // Touch Control Listeners
+        document.getElementById('btn-left').addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        document.getElementById('btn-left').addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        document.getElementById('btn-right').addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        document.getElementById('btn-right').addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+        document.getElementById('btn-drum').addEventListener('click', (e) => { e.preventDefault(); handleDrumBeat(); });
+
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('restart-btn').addEventListener('click', startGame);
+
+        function handleDrumBeat() {
+            if (gameState !== 'PLAYING') return;
+
+            sound.init();
+
+            // Calculate timing offset from the center of beat (beatProgress near 0.5 or 1.0/0.0)
+            const diff = Math.min(beatProgress, 1 - beatProgress);
+            totalBeats++;
+
+            if (diff < 0.12) { // Perfect Hit
+                speed = Math.min(speed + 1.2, MAX_SPEED);
+                score += 150;
+                successfulBeats++;
+                sound.playDrum(true);
+                showRhythmFeedback('PERFECT BEAT!', 'text-emerald-400');
+                createBeatParticles();
+            } else if (diff < 0.22) { // Good Hit
+                speed = Math.min(speed + 0.6, MAX_SPEED);
+                score += 50;
+                successfulBeats++;
+                sound.playDrum(false);
+                showRhythmFeedback('GOOD!', 'text-yellow-400');
+            } else { // Miss
+                speed = Math.max(speed - 0.5, BASE_SPEED);
+                showRhythmFeedback('MISS!', 'text-red-400');
+            }
+        }
+
+        function showRhythmFeedback(text, colorClass) {
+            rhythmFeedback.className = `h-5 text-xs font-black uppercase tracking-widest mt-1 transition-all ${colorClass}`;
+            rhythmFeedback.innerText = text;
+        }
+
+        function createBeatParticles() {
+            for (let i = 0; i < 12; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                particles.push({
+                    x: boat.x,
+                    y: boat.y - 40,
+                    vx: Math.cos(angle) * (Math.random() * 4 + 2),
+                    vy: Math.sin(angle) * (Math.random() * 4 + 2),
+                    radius: Math.random() * 4 + 2,
+                    color: '#fef08a',
+                    life: 1.0
+                });
+            }
+        }
+
+        function startGame() {
+            sound.init();
+            score = 0;
+            distance = 0;
+            health = 100;
+            speed = BASE_SPEED;
+            totalBeats = 0;
+            successfulBeats = 0;
+            obstacles = [];
+            items = [];
+            particles = [];
+            bridges = [];
+
+            // Initialize Spectators / Riverbanks
+            spectators = [];
+            for (let y = 0; y < canvas.height; y += 40) {
+                spectators.push({ y: y, side: 'left', color: Math.random() > 0.5 ? '#ef4444' : '#eab308' });
+                spectators.push({ y: y, side: 'right', color: Math.random() > 0.5 ? '#ef4444' : '#3b82f6' });
+            }
+
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            hud.classList.remove('hidden');
+
+            lastBeatTime = performance.now();
+        }
+
+        function gameOver(reason) {
+            gameState = 'GAMEOVER';
+            sound.playCrash();
+
+            if (score > highScore) {
+                highScore = Math.floor(score);
+                localStorage.setItem('dragon_boat_highscore', highScore);
+            }
+
+            document.getElementById('go-distance').innerText = `${Math.floor(distance)} m`;
+            const accuracy = totalBeats > 0 ? Math.round((successfulBeats / totalBeats) * 100) : 0;
+            document.getElementById('go-accuracy').innerText = `${accuracy}%`;
+            document.getElementById('go-score').innerText = Math.floor(score);
+            document.getElementById('game-over-reason').innerText = reason;
+
+            hud.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        let spawnTimer = 0;
+        function spawnEntities() {
+            spawnTimer += speed * 0.1;
+
+            if (spawnTimer > 12) {
+                spawnTimer = 0;
+                const riverWidth = canvas.width * 0.6;
+                const minX = canvas.width * 0.2;
+                const maxX = canvas.width * 0.8;
+
+                // Spawn Obstacle or Item
+                const rand = Math.random();
+                if (rand < 0.5) {
+                    // Spawn Log, Rock, or Whirlpool
+                    const types = ['log', 'rock', 'whirlpool'];
+                    const type = types[Math.floor(Math.random() * types.length)];
+                    obstacles.push({
+                        x: minX + Math.random() * (riverWidth - 40),
+                        y: -60,
+                        type: type,
+                        width: type === 'log' ? 60 : (type === 'rock' ? 40 : 50),
+                        height: type === 'log' ? 24 : (type === 'rock' ? 40 : 50),
+                        rotation: Math.random() * Math.PI
+                    });
+                } else if (rand < 0.85) {
+                    // Spawn Collectible (Zongzi or Lantern)
+                    const isZongzi = Math.random() > 0.4;
+                    items.push({
+                        x: minX + Math.random() * (riverWidth - 30),
+                        y: -40,
+                        type: isZongzi ? 'zongzi' : 'lantern',
+                        width: 30,
+                        height: 30,
+                        pulse: 0
+                    });
+                }
+
+                // Occasionally Spawn Traditional Bridge Decor
+                if (Math.random() < 0.08 && bridges.length === 0) {
+                    bridges.push({ y: -150, height: 80 });
+                }
+            }
+        }
+
+        function update(deltaTime) {
+            if (gameState !== 'PLAYING') return;
+
+            // 1. Rhythm Metronome Sync
+            const now = performance.now();
+            const elapsedBeat = (now - lastBeatTime) % beatInterval;
+            beatProgress = elapsedBeat / beatInterval;
+
+            // Rhythm Marker Positioning UI
+            const markerPos = Math.abs(beatProgress - 0.5) * 2; // 1 to 0 to 1
+            rhythmMarker.style.transform = `translateX(${(0.5 - beatProgress) * 280}px)`;
+
+            // 2. Boat Steering & Speed Physics
+            if (keys.left) boat.x -= 6;
+            if (keys.right) boat.x += 6;
+
+            // Keep Boat inside River Limits (20% to 80% screen width)
+            const minX = canvas.width * 0.2 + boat.width / 2;
+            const maxX = canvas.width * 0.8 - boat.width / 2;
+            boat.x = Math.max(minX, Math.min(maxX, boat.x));
+
+            // Natural speed decay over time to base speed
+            if (speed > BASE_SPEED) {
+                speed -= 0.003 * deltaTime;
+            }
+
+            // Progression
+            distance += (speed * deltaTime) * 0.05;
+            score += (speed * deltaTime) * 0.1;
+
+            // Paddle animation
+            boat.paddleAngle += 0.15 * (speed / BASE_SPEED);
+
+            // 3. Update Spectators & Scenery Scroll
+            spectators.forEach(s => {
+                s.y += speed;
+                if (s.y > canvas.height) s.y = -20;
+            });
+
+            // 4. Update Bridges
+            bridges.forEach((b, index) => {
+                b.y += speed * 0.8;
+                if (b.y > canvas.height + 100) bridges.splice(index, 1);
+            });
+
+            // 5. Update Obstacles
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                const obs = obstacles[i];
+                obs.y += speed;
+
+                // Collision Detection with Boat
+                if (Math.abs(boat.x - obs.x) < (boat.width + obs.width) / 2 * 0.7 &&
+                    Math.abs(boat.y - obs.y) < (boat.height + obs.height) / 2 * 0.7) {
+
+                    sound.playCrash();
+                    health -= obs.type === 'rock' ? 25 : (obs.type === 'whirlpool' ? 15 : 20);
+                    speed = BASE_SPEED; // Reset speed on crash
+
+                    // Visual Spark/Splash particles
+                    for (let p = 0; p < 15; p++) {
+                        particles.push({
+                            x: obs.x, y: obs.y,
+                            vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                            radius: Math.random() * 5 + 2, color: '#ef4444', life: 1.0
+                        });
+                    }
+
+                    obstacles.splice(i, 1);
+
+                    if (health <= 0) {
+                        health = 0;
+                        gameOver("Boat took too much structural damage!");
+                    }
+                    continue;
+                }
+
+                if (obs.y > canvas.height + 50) obstacles.splice(i, 1);
+            }
+
+            // 6. Update Items
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.y += speed;
+                item.pulse += 0.08;
+
+                // Pickup Collision
+                if (Math.abs(boat.x - item.x) < (boat.width + item.width) / 2 &&
+                    Math.abs(boat.y - item.y) < (boat.height + item.height) / 2) {
+
+                    sound.playPowerup();
+                    if (item.type === 'zongzi') {
+                        score += 300;
+                        health = Math.min(100, health + 10);
+                    } else { // Lantern
+                        speed = Math.min(speed + 2.0, MAX_SPEED);
+                        score += 200;
+                    }
+
+                    // Green/Gold Sparkle Particles
+                    for (let p = 0; p < 10; p++) {
+                        particles.push({
+                            x: item.x, y: item.y,
+                            vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6,
+                            radius: Math.random() * 4 + 2,
+                            color: item.type === 'zongzi' ? '#34d399' : '#fef08a', life: 1.0
+                        });
+                    }
+
+                    items.splice(i, 1);
+                    continue;
+                }
+
+                if (item.y > canvas.height + 50) items.splice(i, 1);
+            }
+
+            // 7. Water Trail Particles
+            if (Math.random() < 0.6) {
+                particles.push({
+                    x: boat.x + (Math.random() - 0.5) * 20,
+                    y: boat.y + 50,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: speed * 0.5,
+                    radius: Math.random() * 4 + 2,
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    life: 0.8
+                });
+            }
+
+            // Update Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Update Spawns
+            spawnEntities();
+
+            // Update UI
+            healthBar.style.width = `${health}%`;
+            healthText.innerText = `${Math.round(health)}%`;
+            scoreVal.innerText = Math.floor(score).toString().padStart(6, '0');
+            distanceVal.innerHTML = `${Math.floor(distance)} <span class="text-xs font-normal text-amber-400">m</span>`;
+            speedVal.innerText = `${(speed * 3.6).toFixed(1)} km/h`;
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Render Environment & Scrolling River
+            drawRiver();
+
+            // 2. Render Bridges (Behind Boat)
+            bridges.forEach(drawBridge);
+
+            // 3. Render Collectibles & Obstacles
+            items.forEach(drawItem);
+            obstacles.forEach(drawObstacle);
+
+            // 4. Render Dragon Boat
+            drawDragonBoat(boat.x, boat.y);
+
+            // 5. Render Particles
+            particles.forEach(p => {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        function drawRiver() {
+            // Water Gradient
+            const waterGrad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            waterGrad.addColorStop(0, '#0284c7');
+            waterGrad.addColorStop(0.5, '#0369a1');
+            waterGrad.addColorStop(1, '#0284c7');
+            ctx.fillStyle = waterGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Riverbanks (Grassy shores with Asian motif border)
+            const bankWidth = canvas.width * 0.2;
+
+            // Left Bank
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(0, 0, bankWidth, canvas.height);
+            ctx.fillStyle = '#166534';
+            ctx.fillRect(bankWidth - 12, 0, 12, canvas.height);
+
+            // Right Bank
+            ctx.fillStyle = '#15803d';
+            ctx.fillRect(canvas.width - bankWidth, 0, bankWidth, canvas.height);
+            ctx.fillStyle = '#166534';
+            ctx.fillRect(canvas.width - bankWidth, 0, 12, canvas.height);
+
+            // Animated Water Ripples
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+            ctx.lineWidth = 2;
+            const time = performance.now() * 0.003;
+            for (let i = 0; i < 8; i++) {
+                const y = (time * 100 + i * 110) % canvas.height;
+                ctx.beginPath();
+                ctx.moveTo(bankWidth + 20, y);
+                ctx.quadraticCurveTo(canvas.width / 2, y + Math.sin(time + i) * 15, canvas.width - bankWidth - 20, y);
+                ctx.stroke();
+            }
+
+            // Render Cheering Spectators on Banks
+            spectators.forEach(s => {
+                const x = s.side === 'left' ? bankWidth - 25 : canvas.width - bankWidth + 25;
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.arc(x, s.y, 7, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawDragonBoat(x, y) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            // Boat Hull Shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+            ctx.beginPath();
+            ctx.ellipse(5, 5, 18, 55, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Main Wooden Boat Hull
+            ctx.fillStyle = '#b45309'; // Reddish-amber wood
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 16, 50, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Gold Trim Detailing
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Paddlers & Animated Oars
+            const paddleOffset = Math.sin(boat.paddleAngle) * 12;
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 3;
+
+            for (let i = -25; i <= 25; i += 16) {
+                // Left Oar
+                ctx.beginPath();
+                ctx.moveTo(-10, i);
+                ctx.lineTo(-30 + paddleOffset, i - 5);
+                ctx.stroke();
+
+                // Right Oar
+                ctx.beginPath();
+                ctx.moveTo(10, i);
+                ctx.lineTo(30 - paddleOffset, i - 5);
+                ctx.stroke();
+
+                // Paddler Heads (Red Hats)
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.arc(-6, i, 4, 0, Math.PI * 2);
+                ctx.arc(6, i, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Drummer at the Stern/Middle
+            ctx.fillStyle = '#f59e0b'; // Drum
+            ctx.beginPath();
+            ctx.arc(0, 15, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#dc2626'; // Drummer Head
+            ctx.beginPath();
+            ctx.arc(0, 15, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Elaborate Dragon Head (Bow - Top)
+            ctx.fillStyle = '#dc2626'; // Red dragon Head
+            ctx.beginPath();
+            ctx.moveTo(0, -65);
+            ctx.lineTo(-12, -48);
+            ctx.lineTo(12, -48);
+            ctx.closePath();
+            ctx.fill();
+
+            // Dragon Eyes & Horns (Gold)
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.arc(-5, -55, 3, 0, Math.PI * 2);
+            ctx.arc(5, -55, 3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dragon Tail (Stern - Bottom)
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            ctx.moveTo(0, 50);
+            ctx.lineTo(-10, 65);
+            ctx.lineTo(0, 60);
+            ctx.lineTo(10, 65);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function drawObstacle(obs) {
+            ctx.save();
+            ctx.translate(obs.x, obs.y);
+
+            if (obs.type === 'log') {
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(-obs.width / 2, -obs.height / 2, obs.width, obs.height);
+                ctx.strokeStyle = '#451a03';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(-obs.width / 2, -obs.height / 2, obs.width, obs.height);
+            } else if (obs.type === 'rock') {
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath();
+                ctx.arc(0, 0, obs.width / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            } else if (obs.type === 'whirlpool') {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const time = performance.now() * 0.005;
+                ctx.arc(0, 0, (obs.width / 2) * Math.abs(Math.sin(time)), 0, Math.PI * 4);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawItem(item) {
+            ctx.save();
+            ctx.translate(item.x, item.y);
+            const scale = 1 + Math.sin(item.pulse) * 0.1;
+            ctx.scale(scale, scale);
+
+            if (item.type === 'zongzi') {
+                // Triangle Rice Dumpling (Zongzi)
+                ctx.fillStyle = '#16a34a'; // Bamboo leaf green
+                ctx.beginPath();
+                ctx.moveTo(0, -15);
+                ctx.lineTo(14, 12);
+                ctx.lineTo(-14, 12);
+                ctx.closePath();
+                ctx.fill();
+
+                // Yellow Ribbon Tie
+                ctx.strokeStyle = '#fde047';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-8, 2);
+                ctx.lineTo(8, 2);
+                ctx.stroke();
+            } else {
+                // Red Chinese Lantern
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 12, 15, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fde047'; // Gold Caps
+                ctx.fillRect(-8, -16, 16, 4);
+                ctx.fillRect(-8, 12, 16, 4);
+            }
+
+            ctx.restore();
+        }
+
+        function drawBridge(bridge) {
+            ctx.save();
+            // Traditional Red & Gold Bridge Overlay
+            ctx.fillStyle = '#991b1b';
+            ctx.fillRect(0, bridge.y, canvas.width, bridge.height);
+
+            ctx.fillStyle = '#fde047';
+            ctx.fillRect(0, bridge.y + 10, canvas.width, 6);
+            ctx.fillRect(0, bridge.y + bridge.height - 16, canvas.width, 6);
+
+            // Roof Pillars/Details
+            ctx.fillStyle = '#7f1d1d';
+            for (let x = 0; x < canvas.width; x += 60) {
+                ctx.fillRect(x, bridge.y, 20, bridge.height);
+            }
+            ctx.restore();
+        }
+
+        let lastTime = performance.now();
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            update(deltaTime);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize Canvas & Start Loop
+        resizeCanvas();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
