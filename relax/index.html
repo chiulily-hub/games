@@ -1,0 +1,620 @@
+```html
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindFlow — Beginner's Meditation & Mindfulness</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        sage: { 50: '#f4f7f4', 100: '#e5ede5', 200: '#cbe0cb', 300: '#a3c7a3', 400: '#75a675', 500: '#528552', 600: '#3f683f', 700: '#335333', 800: '#2a432a', 900: '#233723' },
+                        amber: { 50: '#fdfbf7', 100: '#f7f1e3', 200: '#eddcc3', 300: '#e0c29b', 400: '#d0a36e', 500: '#bc864b', 600: '#a7703e', 700: '#865633', 800: '#6c452c', 900: '#583825' }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-serif { font-family: 'Lora', serif; }
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.35); opacity: 0.95; }
+        }
+        .animate-breathe { animation: breathe 8s ease-in-out infinite; }
+        .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.4); }
+        .dark .glass-panel { background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); }
+    </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-300 flex flex-col"
+    x-data="meditationApp()" x-init="init()">
+
+    <!-- Top Navigation -->
+    <header class="sticky top-0 z-50 glass-panel border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-sage-500 text-white flex items-center justify-center shadow-md shadow-sage-500/20">
+                <i class="fa-solid fa-spa text-lg"></i>
+            </div>
+            <div>
+                <h1 class="font-serif font-bold text-lg tracking-tight text-slate-900 dark:text-white">MindFlow</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Beginner's Meditation & Mindfulness</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex items-center space-x-1 bg-slate-200/60 dark:bg-slate-800/60 p-1 rounded-xl">
+            <button @click="activeTab = 'library'" :class="activeTab === 'library' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all">Sessions</button>
+            <button @click="activeTab = 'player'" :class="activeTab === 'player' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all">Player & Timer</button>
+            <button @click="activeTab = 'breathe'" :class="activeTab === 'breathe' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all">Breath Guide</button>
+            <button @click="activeTab = 'journal'" :class="activeTab === 'journal' ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all">Journal</button>
+        </nav>
+
+        <!-- Right Controls -->
+        <div class="flex items-center space-x-3">
+            <!-- Soundscape Quick Toggle -->
+            <button @click="toggleMasterAudio()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-slate-700 dark:text-slate-300 relative" title="Toggle Ambient Audio">
+                <i class="fa-solid" :class="audioPlaying ? 'fa-volume-high text-sage-500 animate-pulse' : 'fa-volume-xmark'"></i>
+            </button>
+            <!-- Dark Mode Toggle -->
+            <button @click="toggleDarkMode()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-slate-700 dark:text-slate-300" title="Toggle Theme">
+                <i class="fa-solid" :class="darkMode ? 'fa-sun text-amber-400' : 'fa-moon'"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Sub-Navigation Bar -->
+    <div class="md:hidden flex items-center justify-around bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-2 py-2 text-xs">
+        <button @click="activeTab = 'library'" :class="activeTab === 'library' ? 'text-sage-600 dark:text-sage-400 font-bold border-b-2 border-sage-500 pb-1' : 'text-slate-500'" class="flex flex-col items-center space-y-1"><i class="fa-solid fa-list text-base"></i><span>Sessions</span></button>
+        <button @click="activeTab = 'player'" :class="activeTab === 'player' ? 'text-sage-600 dark:text-sage-400 font-bold border-b-2 border-sage-500 pb-1' : 'text-slate-500'" class="flex flex-col items-center space-y-1"><i class="fa-solid fa-play text-base"></i><span>Player</span></button>
+        <button @click="activeTab = 'breathe'" :class="activeTab === 'breathe' ? 'text-sage-600 dark:text-sage-400 font-bold border-b-2 border-sage-500 pb-1' : 'text-slate-500'" class="flex flex-col items-center space-y-1"><i class="fa-solid fa-wind text-base"></i><span>Breathe</span></button>
+        <button @click="activeTab = 'journal'" :class="activeTab === 'journal' ? 'text-sage-600 dark:text-sage-400 font-bold border-b-2 border-sage-500 pb-1' : 'text-slate-500'" class="flex flex-col items-center space-y-1"><i class="fa-solid fa-book-open text-base"></i><span>Journal</span></button>
+    </div>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-8 overflow-y-auto">
+
+        <!-- TAB 1: SESSIONS LIBRARY -->
+        <div x-show="activeTab === 'library'" class="space-y-6">
+            <!-- Hero Banner -->
+            <div class="rounded-3xl bg-gradient-to-br from-sage-600 to-sage-800 text-white p-6 lg:p-10 shadow-xl relative overflow-hidden">
+                <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">
+                    <i class="fa-solid fa-spa"></i>
+                </div>
+                <div class="max-w-xl relative z-10 space-y-3">
+                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider">Mindfulness Hub</span>
+                    <h2 class="font-serif text-3xl lg:text-4xl font-bold">Find Your Inner Calm</h2>
+                    <p class="text-sage-100 text-sm lg:text-base">Explore guided meditations and soothing soundscapes tailored for beginners. Release stress, center your thoughts, and nurture deep relaxation.</p>
+                </div>
+            </div>
+
+            <!-- Category Filters -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
+                <button @click="selectedCategory = 'all'" :class="selectedCategory === 'all' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">All Sessions</button>
+                <button @click="selectedCategory = 'stress'" :class="selectedCategory === 'stress' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Stress & Relief</button>
+                <button @click="selectedCategory = 'sleep'" :class="selectedCategory === 'sleep' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Deep Sleep</button>
+                <button @click="selectedCategory = 'focus'" :class="selectedCategory === 'focus' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Focus & Clarity</button>
+                <button @click="selectedCategory = 'anxiety'" :class="selectedCategory === 'anxiety' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Anxiety Calming</button>
+                <button @click="selectedCategory = 'loving'" :class="selectedCategory === 'loving' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Loving-Kindness</button>
+                <button @click="selectedCategory = 'body'" :class="selectedCategory === 'body' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Body Scan</button>
+            </div>
+
+            <!-- Meditation Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <template x-for="session in filteredSessions" :key="session.id">
+                    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition flex flex-col justify-between group">
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between">
+                                <span class="px-3 py-1 bg-sage-50 dark:bg-sage-950/50 text-sage-600 dark:text-sage-400 rounded-full text-xs font-semibold uppercase tracking-wider" x-text="session.categoryName"></span>
+                                <button @click="toggleFavorite(session.id)" class="text-slate-400 hover:text-rose-500 transition">
+                                    <i class="fa-solid" :class="favorites.includes(session.id) ? 'fa-heart text-rose-500' : 'fa-heart'"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <h3 class="font-serif text-xl font-bold text-slate-900 dark:text-white group-hover:text-sage-600 transition" x-text="session.title"></h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center space-x-2">
+                                    <span><i class="fa-regular fa-clock mr-1"></i> <span x-text="session.duration"></span> mins</span>
+                                    <span>•</span>
+                                    <span class="capitalize" x-text="session.level"></span>
+                                </p>
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed" x-text="session.description"></p>
+                        </div>
+                        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span class="text-xs text-slate-400"><i class="fa-solid fa-music mr-1"></i> <span x-text="session.soundscapeName"></span></span>
+                            <button @click="startSession(session)" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-xl text-sm font-semibold transition flex items-center space-x-2 shadow-md shadow-sage-500/20">
+                                <i class="fa-solid fa-play text-xs"></i>
+                                <span>Begin</span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- TAB 2: PLAYER & TIMER -->
+        <div x-show="activeTab === 'player'" class="max-w-2xl mx-auto space-y-6">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-8">
+                <!-- Session Header Info -->
+                <div class="space-y-2">
+                    <span class="px-3 py-1 bg-sage-50 dark:bg-sage-950/50 text-sage-600 dark:text-sage-400 rounded-full text-xs font-semibold uppercase tracking-wider" x-text="currentSession ? currentSession.categoryName : 'Custom Session'"></span>
+                    <h2 class="font-serif text-3xl font-bold text-slate-900 dark:text-white" x-text="currentSession ? currentSession.title : 'Mindful Presence'"></h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm" x-text="currentSession ? currentSession.description : 'Settle into a comfortable posture and follow your natural breath.'"></p>
+                </div>
+
+                <!-- Circular Timer Display -->
+                <div class="relative w-64 h-64 mx-auto flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="128" cy="128" r="116" stroke="currentColor" stroke-width="12" class="text-slate-100 dark:text-slate-800 fill-none"></circle>
+                        <circle cx="128" cy="128" r="116" stroke="currentColor" stroke-width="12" class="text-sage-500 fill-none transition-all duration-1000" :stroke-dasharray="730" :stroke-dashoffset="calculateDashOffset()"></circle>
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center space-y-1">
+                        <span class="text-4xl lg:text-5xl font-bold font-mono tracking-tight text-slate-900 dark:text-white" x-text="formattedTimeLeft()"></span>
+                        <span class="text-xs text-slate-400 uppercase tracking-widest font-semibold" x-text="timerRunning ? 'Meditation in Progress' : (timeLeft === 0 ? 'Session Complete' : 'Paused')"></span>
+                    </div>
+                </div>
+
+                <!-- Timer Controls -->
+                <div class="flex items-center justify-center space-x-4">
+                    <button @click="resetTimer()" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition flex items-center justify-center" title="Reset Timer">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                    <button @click="toggleTimer()" class="w-16 h-16 rounded-3xl bg-sage-500 hover:bg-sage-600 text-white shadow-xl shadow-sage-500/30 transition flex items-center justify-center text-xl" :title="timerRunning ? 'Pause' : 'Start'">
+                        <i class="fa-solid" :class="timerRunning ? 'fa-pause' : 'fa-play'"></i>
+                    </button>
+                    <button @click="adjustDuration(5)" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition flex items-center justify-center text-xs font-bold" title="Add 5 Minutes">
+                        +5m
+                    </button>
+                </div>
+
+                <!-- Ambient Soundscape Selector -->
+                <div class="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ambient Soundscape</span>
+                        <span class="text-xs font-medium text-sage-600 dark:text-sage-400" x-text="currentSoundscapeName"></span>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        <button @click="setSoundscape('waves')" :class="activeSoundscape === 'waves' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-water"></i><span>Ocean</span>
+                        </button>
+                        <button @click="setSoundscape('rain')" :class="activeSoundscape === 'rain' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-cloud-rain"></i><span>Rain</span>
+                        </button>
+                        <button @click="setSoundscape('bowl')" :class="activeSoundscape === 'bowl' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-bell"></i><span>Bowl</span>
+                        </button>
+                        <button @click="setSoundscape('wind')" :class="activeSoundscape === 'wind' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-wind"></i><span>Wind</span>
+                        </button>
+                        <button @click="setSoundscape('tone')" :class="activeSoundscape === 'tone' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition col-span-2 md:col-span-1 flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-wave-square"></i><span>432Hz</span>
+                        </button>
+                    </div>
+                    <!-- Master Volume Slider -->
+                    <div class="flex items-center space-x-3 pt-2">
+                        <i class="fa-solid fa-volume-low text-xs text-slate-400"></i>
+                        <input type="range" min="0" max="1" step="0.05" x-model="masterVolume" @input="updateVolume()" class="w-full accent-sage-500 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer">
+                        <i class="fa-solid fa-volume-high text-xs text-slate-400"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: BREATH GUIDE -->
+        <div x-show="activeTab === 'breathe'" class="max-w-2xl mx-auto space-y-6">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-8">
+                <div class="space-y-2">
+                    <span class="px-3 py-1 bg-sage-50 dark:bg-sage-950/50 text-sage-600 dark:text-sage-400 rounded-full text-xs font-semibold uppercase tracking-wider">Pranayama Breathwork</span>
+                    <h2 class="font-serif text-3xl font-bold text-slate-900 dark:text-white" x-text="breathTechniques[currentBreathTechnique].name"></h2>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm" x-text="breathTechniques[currentBreathTechnique].description"></p>
+                </div>
+
+                <!-- Breath Selector -->
+                <div class="flex items-center justify-center space-x-2">
+                    <template x-for="(tech, key) in breathTechniques" :key="key">
+                        <button @click="switchBreathTechnique(key)" :class="currentBreathTechnique === key ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="px-4 py-2 rounded-xl text-xs font-semibold transition" x-text="tech.shortName"></button>
+                    </template>
+                </div>
+
+                <!-- Animated Breathing Circle -->
+                <div class="relative w-64 h-64 mx-auto flex items-center justify-center">
+                    <div class="absolute w-48 h-48 rounded-full bg-sage-200/50 dark:bg-sage-900/30 animate-breathe flex items-center justify-center">
+                        <div class="w-32 h-32 rounded-full bg-sage-400/40 dark:bg-sage-700/40 flex items-center justify-center"></div>
+                    </div>
+                    <div class="relative z-10 flex flex-col items-center justify-center space-y-1">
+                        <span class="text-2xl lg:text-3xl font-bold font-serif text-slate-900 dark:text-white" x-text="breathPhaseText"></span>
+                        <span class="text-xs text-sage-600 dark:text-sage-400 font-semibold tracking-wider" x-text="breathCountdown + 's'"></span>
+                    </div>
+                </div>
+
+                <!-- Start/Stop Breath Practice -->
+                <div class="flex items-center justify-center space-x-4">
+                    <button @click="toggleBreathPractice()" class="px-8 py-3 bg-sage-500 hover:bg-sage-600 text-white rounded-2xl font-semibold shadow-lg shadow-sage-500/25 transition flex items-center space-x-2">
+                        <i class="fa-solid" :class="breathActive ? 'fa-pause' : 'fa-play'"></i>
+                        <span x-text="breathActive ? 'Pause Breathing' : 'Start Breathing Guide'"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: JOURNAL & FAVORITES -->
+        <div x-show="activeTab === 'journal'" class="max-w-3xl mx-auto space-y-6">
+            <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 lg:p-8 border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                    <div>
+                        <h2 class="font-serif text-2xl font-bold text-slate-900 dark:text-white">Mindfulness Journal</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Record your thoughts, gratitude, and post-meditation reflections.</p>
+                    </div>
+                    <button @click="saveJournalEntry()" class="px-4 py-2 bg-sage-500 hover:bg-sage-600 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-sage-500/20">
+                        <i class="fa-solid fa-plus mr-1.5"></i> Save Entry
+                    </button>
+                </div>
+
+                <!-- New Journal Form -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">How are you feeling right now?</label>
+                        <div class="flex items-center space-x-3">
+                            <button @click="newMood = 'Peaceful'" :class="newMood === 'Peaceful' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition">🕊️ Peaceful</button>
+                            <button @click="newMood = 'Calm'" :class="newMood === 'Calm' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition">🌿 Calm</button>
+                            <button @click="newMood = 'Reflective'" :class="newMood === 'Reflective' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition">🌊 Reflective</button>
+                            <button @click="newMood = 'Restless'" :class="newMood === 'Restless' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition">⚡ Restless</button>
+                        </div>
+                    </div>
+                    <div>
+                        <textarea x-model="newJournalText" rows="4" placeholder="Write your reflections here..." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-4 text-sm focus:outline-none focus:ring-2 focus:ring-sage-500 transition text-slate-800 dark:text-slate-100"></textarea>
+                    </div>
+                </div>
+
+                <!-- Past Entries List -->
+                <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h3 class="font-serif font-bold text-lg text-slate-900 dark:text-white">Past Reflections</h3>
+                    <template x-for="entry in journalEntries" :key="entry.id">
+                        <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 space-y-2">
+                            <div class="flex items-center justify-between text-xs text-slate-400">
+                                <span class="font-semibold text-sage-600 dark:text-sage-400" x-text="entry.mood"></span>
+                                <span x-text="entry.date"></span>
+                            </div>
+                            <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed" x-text="entry.text"></p>
+                        </div>
+                    </template>
+                    <p class="text-xs text-slate-400 italic text-center py-4" x-show="journalEntries.length === 0">No journal entries saved yet. Record your first reflection above!</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-4 text-center text-xs text-slate-400 border-t border-slate-200 dark:border-slate-800">
+        MindFlow — Designed for mindful living and inner peace.
+    </footer>
+
+    <!-- App Logic Script -->
+    <script>
+        function meditationApp() {
+            return {
+                activeTab: 'library',
+                darkMode: false,
+                selectedCategory: 'all',
+                audioPlaying: false,
+                activeSoundscape: 'waves',
+                currentSoundscapeName: 'Ocean Waves',
+                masterVolume: 0.5,
+                
+                // Audio Context & Nodes
+                audioCtx: null,
+                masterGain: null,
+                soundscapeNodes: [],
+
+                // Timer state
+                currentSession: null,
+                sessionDuration: 5, // minutes
+                timeLeft: 300, // seconds
+                timerRunning: false,
+                timerInterval: null,
+
+                // Breathwork state
+                currentBreathTechnique: 'box',
+                breathActive: false,
+                breathPhaseText: 'Ready',
+                breathCountdown: 4,
+                breathTimer: null,
+                breathStep: 0,
+
+                breathTechniques: {
+                    box: { name: 'Box Breathing (4-4-4-4)', shortName: 'Box', description: 'Equal parts inhale, hold, exhale, hold for nervous system balance.', steps: ['Inhale', 'Hold', 'Exhale', 'Hold'], duration: 4 },
+                    relax: { name: '4-7-8 Deep Relaxation', shortName: '4-7-8', description: 'Powerful natural tranquilizer for anxiety relief and deep sleep preparation.', steps: ['Inhale', 'Hold', 'Exhale'], duration: [4, 7, 8] },
+                    equal: { name: 'Equal Breathing (5:5)', shortName: 'Equal', description: 'Sama Vritti breathing to center the mind and cultivate calm focus.', steps: ['Inhale', 'Exhale'], duration: 5 }
+                },
+
+                // Journal state
+                newMood: 'Peaceful',
+                newJournalText: '',
+                journalEntries: [
+                    { id: 1, date: 'October 19, 2026', mood: '🕊️ Peaceful', text: 'Completed a 10-minute ocean waves meditation. Felt the tension leave my shoulders immediately.' }
+                ],
+                favorites: [],
+
+                sessions: [
+                    { id: 1, title: 'Releasing Daily Stress', category: 'stress', categoryName: 'Stress & Relief', duration: 5, level: 'Beginner', soundscape: 'waves', soundscapeName: 'Ocean Waves', description: 'A gentle 5-minute guided pause to let go of workplace and daily tension.' },
+                    { id: 2, title: 'Deep Sleep Sanctuary', category: 'sleep', categoryName: 'Deep Sleep', duration: 15, level: 'All Levels', soundscape: 'rain', soundscapeName: 'Gentle Rain', description: 'Drift effortlessly into restorative sleep with soft rain and slow body scanning.' },
+                    { id: 3, title: 'Clear Mind Focus', category: 'focus', categoryName: 'Focus & Clarity', duration: 10, level: 'Beginner', soundscape: 'tone', soundscapeName: '432Hz Tone', description: 'Sharpen your mental clarity and gentle attention using 432Hz harmonic resonance.' },
+                    { id: 4, title: 'Anxiety Release Breath', category: 'anxiety', categoryName: 'Anxiety Calming', duration: 5, level: 'Beginner', soundscape: 'wind', soundscapeName: 'Forest Wind', description: 'Calm an active nervous system through box breathing and grounding imagery.' },
+                    { id: 5, title: 'Heartfelt Loving-Kindness', category: 'loving', categoryName: 'Loving-Kindness', duration: 10, level: 'All Levels', soundscape: 'bowl', soundscapeName: 'Singing Bowl', description: 'Cultivate warmth, compassion, and kindness toward yourself and loved ones.' },
+                    { id: 6, title: 'Head-to-Toe Body Scan', category: 'body', categoryName: 'Body Scan', duration: 20, level: 'Beginner', soundscape: 'waves', soundscapeName: 'Ocean Waves', description: 'Systematically release physical tension from every muscle group in your body.' }
+                ],
+
+                init() {
+                    // Check system theme
+                    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                        this.darkMode = true;
+                        document.documentElement.classList.add('dark');
+                    }
+                },
+
+                toggleDarkMode() {
+                    this.darkMode = !this.darkMode;
+                    if (this.darkMode) {
+                        document.documentElement.classList.add('dark');
+                    } else {
+                        document.documentElement.classList.remove('dark');
+                    }
+                },
+
+                get filteredSessions() {
+                    if (this.selectedCategory === 'all') return this.sessions;
+                    return this.sessions.filter(s => s.category === this.selectedCategory);
+                },
+
+                toggleFavorite(id) {
+                    if (this.favorites.includes(id)) {
+                        this.favorites = this.favorites.filter(f => f !== id);
+                    } else {
+                        this.favorites.push(id);
+                    }
+                },
+
+                startSession(session) {
+                    this.currentSession = session;
+                    this.sessionDuration = session.duration;
+                    this.timeLeft = session.duration * 60;
+                    this.setSoundscape(session.soundscape);
+                    this.activeTab = 'player';
+                },
+
+                // Audio Context & Generator
+                initAudioContext() {
+                    if (!this.audioCtx) {
+                        const AudioContext = window.AudioContext || window.webkitAudioContext;
+                        this.audioCtx = new AudioContext();
+                        this.masterGain = this.audioCtx.createGain();
+                        this.masterGain.gain.setValueAtTime(this.masterVolume, this.audioCtx.currentTime);
+                        this.masterGain.connect(this.audioCtx.destination);
+                    }
+                    if (this.audioCtx.state === 'suspended') {
+                        this.audioCtx.resume();
+                    }
+                },
+
+                updateVolume() {
+                    if (this.masterGain && this.audioCtx) {
+                        this.masterGain.gain.setValueAtTime(this.masterVolume, this.audioCtx.currentTime);
+                    }
+                },
+
+                toggleMasterAudio() {
+                    if (this.audioPlaying) {
+                        this.stopAudio();
+                    } else {
+                        this.playAudioSoundscape(this.activeSoundscape);
+                    }
+                },
+
+                setSoundscape(type) {
+                    this.activeSoundscape = type;
+                    const names = { waves: 'Ocean Waves', rain: 'Gentle Rain', bowl: 'Singing Bowl', wind: 'Forest Wind', tone: '432Hz Calm Tone' };
+                    this.currentSoundscapeName = names[type] || 'Ambient Sound';
+                    if (this.audioPlaying) {
+                        this.stopAudio();
+                        this.playAudioSoundscape(type);
+                    }
+                },
+
+                playAudioSoundscape(type) {
+                    this.initAudioContext();
+                    this.stopAudio();
+                    this.audioPlaying = true;
+
+                    if (type === 'waves' || type === 'rain' || type === 'wind') {
+                        // White noise generator with filter
+                        const bufferSize = 2 * this.audioCtx.sampleRate;
+                        const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
+                        const output = noiseBuffer.getChannelData(0);
+                        for (let i = 0; i < bufferSize; i++) {
+                            output[i] = Math.random() * 2 - 1;
+                        }
+
+                        const whiteNoise = this.audioCtx.createBufferSource();
+                        whiteNoise.buffer = noiseBuffer;
+                        whiteNoise.loop = true;
+
+                        const filter = this.audioCtx.createBiquadFilter();
+                        if (type === 'waves') {
+                            filter.type = 'lowpass';
+                            filter.frequency.setValueAtTime(400, this.audioCtx.currentTime);
+                        } else if (type === 'rain') {
+                            filter.type = 'bandpass';
+                            filter.frequency.setValueAtTime(1000, this.audioCtx.currentTime);
+                            filter.Q.setValueAtTime(1, this.audioCtx.currentTime);
+                        } else {
+                            filter.type = 'lowpass';
+                            filter.frequency.setValueAtTime(300, this.audioCtx.currentTime);
+                        }
+
+                        whiteNoise.connect(filter);
+                        filter.connect(this.masterGain);
+                        whiteNoise.start();
+                        this.soundscapeNodes.push(whiteNoise);
+                    } else if (type === 'tone' || type === 'bowl') {
+                        // Sine wave oscillator for 432Hz or singing bowl frequency
+                        const osc = this.audioCtx.createOscillator();
+                        osc.type = type === 'bowl' ? 'sine' : 'sine';
+                        osc.frequency.setValueAtTime(type === 'bowl' ? 216 : 432, this.audioCtx.currentTime);
+
+                        const oscGain = this.audioCtx.createGain();
+                        oscGain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+
+                        osc.connect(oscGain);
+                        oscGain.connect(this.masterGain);
+                        osc.start();
+                        this.soundscapeNodes.push(osc);
+                    }
+                },
+
+                stopAudio() {
+                    this.soundscapeNodes.forEach(node => {
+                        try { node.stop(); } catch(e) {}
+                    });
+                    this.soundscapeNodes = [];
+                    this.audioPlaying = false;
+                },
+
+                // Timer Methods
+                toggleTimer() {
+                    if (this.timerRunning) {
+                        clearInterval(this.timerInterval);
+                        this.timerRunning = false;
+                    } else {
+                        if (this.timeLeft <= 0) this.timeLeft = this.sessionDuration * 60;
+                        if (!this.audioPlaying) this.playAudioSoundscape(this.activeSoundscape);
+                        this.timerRunning = true;
+                        this.timerInterval = setInterval(() => {
+                            if (this.timeLeft > 0) {
+                                this.timeLeft--;
+                            } else {
+                                this.timerRunning = false;
+                                clearInterval(this.timerInterval);
+                                this.stopAudio();
+                            }
+                        }, 1000);
+                    }
+                },
+
+                resetTimer() {
+                    clearInterval(this.timerInterval);
+                    this.timerRunning = false;
+                    this.timeLeft = this.sessionDuration * 60;
+                },
+
+                adjustDuration(mins) {
+                    this.sessionDuration += mins;
+                    if (this.sessionDuration > 60) this.sessionDuration = 5;
+                    this.timeLeft = this.sessionDuration * 60;
+                },
+
+                formattedTimeLeft() {
+                    const m = Math.floor(this.timeLeft / 60);
+                    const s = this.timeLeft % 60;
+                    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                },
+
+                calculateDashOffset() {
+                    const total = this.sessionDuration * 60;
+                    const progress = total > 0 ? this.timeLeft / total : 0;
+                    const circumference = 730;
+                    return circumference - (progress * circumference);
+                },
+
+                // Breathwork Methods
+                switchBreathTechnique(key) {
+                    this.currentBreathTechnique = key;
+                    this.stopBreathPractice();
+                    this.breathPhaseText = 'Ready';
+                    this.breathCountdown = 4;
+                },
+
+                toggleBreathPractice() {
+                    if (this.breathActive) {
+                        this.stopBreathPractice();
+                    } else {
+                        this.breathActive = true;
+                        this.runBreathCycle();
+                    }
+                },
+
+                stopBreathPractice() {
+                    this.breathActive = false;
+                    clearTimeout(this.breathTimer);
+                    this.breathPhaseText = 'Ready';
+                },
+
+                runBreathCycle() {
+                    if (!this.breathActive) return;
+                    const tech = this.breathTechniques[this.currentBreathTechnique];
+                    let steps = tech.steps;
+                    let currentStepIndex = 0;
+
+                    const executeStep = () => {
+                        if (!this.breathActive) return;
+                        let phase = steps[currentStepIndex];
+                        this.breathPhaseText = phase;
+                        let duration = 4;
+                        if (Array.isArray(tech.duration)) {
+                            duration = tech.duration[currentStepIndex];
+                        } else {
+                            duration = tech.duration;
+                        }
+
+                        this.breathCountdown = duration;
+                        let countdownInterval = setInterval(() => {
+                            if (!this.breathActive) {
+                                clearInterval(countdownInterval);
+                                return;
+                            }
+                            if (this.breathCountdown > 1) {
+                                this.breathCountdown--;
+                            } else {
+                                clearInterval(countdownInterval);
+                            }
+                        }, 1000);
+
+                        this.breathTimer = setTimeout(() => {
+                            currentStepIndex = (currentStepIndex + 1) % steps.length;
+                            executeStep();
+                        }, duration * 1000);
+                    };
+
+                    executeStep();
+                },
+
+                // Journal Methods
+                saveJournalEntry() {
+                    if (!this.newJournalText.trim()) return;
+                    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                    const dateStr = new Date().toLocaleDateString('en-US', options);
+                    this.journalEntries.unshift({
+                        id: Date.now(),
+                        date: dateStr,
+                        mood: this.newMood,
+                        text: this.newJournalText
+                    });
+                    this.newJournalText = '';
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+
+```
