@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cozy Rain Catcher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;600;700&display=swap');
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            touch-action: none;
+            overflow: hidden;
+            background: #0f172a;
+            user-select: none;
+        }
+
+        .font-game {
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(56, 189, 248, 0.8); }
+        }
+
+        .glow-btn {
+            animation: pulseGlow 2.5s infinite;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex items-center justify-center relative bg-slate-950 text-slate-100">
+
+    <!-- Canvas Layer -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full block z-0"></canvas>
+
+    <div id="hud" class="absolute top-4 left-4 right-4 z-10 flex justify-between items-center pointer-events-none max-w-4xl mx-auto transition-opacity duration-300 opacity-0">
+        <!-- Stats Left -->
+        <div class="flex items-center space-x-2 sm:space-x-4">
+            <div class="glass-panel px-3 py-2 sm:px-4 sm:py-2 rounded-2xl flex items-center space-x-2 shadow-lg">
+                <i class="fa-solid fa-droplet text-cyan-400 text-lg sm:text-xl"></i>
+                <div>
+                    <div class="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-bold">Drops</div>
+                    <div id="dropsCount" class="text-lg sm:text-xl font-bold font-game text-cyan-200">0</div>
+                </div>
+            </div>
+
+            <div class="glass-panel px-3 py-2 sm:px-4 sm:py-2 rounded-2xl flex items-center space-x-2 shadow-lg">
+                <i class="fa-solid fa-trophy text-amber-400 text-lg sm:text-xl"></i>
+                <div>
+                    <div class="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-bold">Best</div>
+                    <div id="highScoreText" class="text-lg sm:text-xl font-bold font-game text-amber-300">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timer Center -->
+        <div class="glass-panel px-4 py-2 sm:px-5 sm:py-2 rounded-2xl flex items-center space-x-2 sm:space-x-3 shadow-lg border-2 border-cyan-500/30">
+            <i class="fa-solid fa-stopwatch text-rose-400 text-xl sm:text-2xl animate-pulse"></i>
+            <div class="text-center">
+                <div class="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-bold">Time</div>
+                <div id="timerText" class="text-xl sm:text-2xl font-bold font-game text-rose-300">30s</div>
+            </div>
+        </div>
+
+        <!-- Water Capacity Bar Right -->
+        <div class="glass-panel px-3 py-2 sm:px-4 sm:py-2 rounded-2xl flex items-center space-x-2 sm:space-x-3 shadow-lg min-w-[120px] sm:min-w-[180px]">
+            <i class="fa-solid fa-glass-water text-blue-400 text-lg sm:text-xl"></i>
+            <div class="w-full">
+                <div class="flex justify-between items-center text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-1">
+                    <span>Fill</span>
+                    <span id="capacityPercent">0%</span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2.5 sm:h-3 overflow-hidden p-0.5 border border-slate-700">
+                    <div id="capacityFill" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full rounded-full transition-all duration-300 w-0"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sound Control Button -->
+    <button id="muteBtn" class="absolute bottom-4 right-4 z-20 glass-panel w-12 h-12 rounded-full flex items-center justify-center text-slate-300 hover:text-white hover:bg-slate-800 transition shadow-lg pointer-events-auto">
+        <i id="muteIcon" class="fa-solid fa-volume-high text-lg"></i>
+    </button>
+
+    <div id="startModal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md transition-opacity duration-300">
+        <div class="glass-panel max-w-md w-full p-6 sm:p-8 rounded-3xl shadow-2xl text-center border border-slate-700 relative overflow-hidden">
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+                <i class="fa-solid fa-cloud-showers-heavy text-3xl sm:text-4xl text-white"></i>
+            </div>
+
+            <h1 class="text-2xl sm:text-4xl font-game text-white mb-2 tracking-wide">Rain Catcher</h1>
+            <p class="text-slate-300 text-xs sm:text-sm mb-5 leading-relaxed">Catch big raindrops in your transparent bucket before 30 seconds run out!</p>
+
+            <!-- Difficulty Selector -->
+            <div class="mb-5">
+                <label class="block text-xs uppercase font-bold tracking-wider text-slate-400 mb-2">Select Difficulty</label>
+                <div class="grid grid-cols-2 gap-3">
+                    <button type="button" id="easyBtn" class="diff-option px-4 py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold text-sm flex flex-col items-center justify-center transition active:scale-95 shadow-lg">
+                        <span class="flex items-center space-x-1">
+                            <i class="fa-solid fa-feather text-emerald-400"></i>
+                            <span>EASY</span>
+                        </span>
+                        <span class="text-[10px] text-emerald-200/70 font-normal mt-0.5">Slow falling rain</span>
+                    </button>
+                    <button type="button" id="hardBtn" class="diff-option px-4 py-3 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-slate-400 font-bold text-sm flex flex-col items-center justify-center transition active:scale-95 hover:border-slate-500">
+                        <span class="flex items-center space-x-1">
+                            <i class="fa-solid fa-bolt text-amber-400"></i>
+                            <span>HARD</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400/70 font-normal mt-0.5">Fast falling rain</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-2 mb-6 text-left bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800 text-xs text-slate-300">
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 inline-block shadow-sm"></span>
+                    <span><b>Normal Drop:</b> +1 Water Drop (+5%)</span>
+                </div>
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-amber-400 inline-block shadow-sm"></span>
+                    <span><b>Golden Drop:</b> +3 Water Drops (+15%)</span>
+                </div>
+                <div class="flex items-center space-x-2.5">
+                    <span class="w-3.5 h-3.5 rounded-full bg-indigo-400 inline-block shadow-sm"></span>
+                    <span><b>Storm Drop:</b> Spawns a mini rainstorm</span>
+                </div>
+            </div>
+
+            <button id="startBtn" class="glow-btn w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-game text-lg tracking-wider hover:brightness-110 active:scale-[0.98] transition shadow-lg">
+                <i class="fa-solid fa-play mr-2"></i> START GAME
+            </button>
+        </div>
+    </div>
+
+    <div id="gameOverModal" class="absolute inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-opacity duration-300">
+        <div class="glass-panel max-w-md w-full p-6 sm:p-8 rounded-3xl shadow-2xl text-center border border-slate-700 relative overflow-hidden">
+            <div id="overBadge" class="w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <i id="overIcon" class="fa-solid fa-trophy text-4xl text-white"></i>
+            </div>
+
+            <h2 id="overTitle" class="text-3xl font-game text-white mb-1">Bucket Full!</h2>
+            <p id="overSubtitle" class="text-slate-400 text-sm mb-6">You filled the transparent bucket completely!</p>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+                    <div class="text-[10px] uppercase text-slate-400 font-bold">Drops Caught</div>
+                    <div id="finalScore" class="text-2xl font-game text-cyan-300">0</div>
+                </div>
+                <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+                    <div class="text-[10px] uppercase text-slate-400 font-bold">Time Left</div>
+                    <div id="finalTime" class="text-2xl font-game text-amber-300">0s</div>
+                </div>
+            </div>
+
+            <button id="restartBtn" class="glow-btn w-full py-4 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-game text-xl tracking-wider hover:brightness-110 active:scale-[0.98] transition shadow-lg">
+                <i class="fa-solid fa-rotate-right mr-2"></i> PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class AudioController {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+            }
+
+            playCatch(isSpecial = false) {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = isSpecial ? 'triangle' : 'sine';
+                const now = this.ctx.currentTime;
+                
+                const startFreq = isSpecial ? 520 : 350;
+                const endFreq = isSpecial ? 880 : 600;
+
+                osc.frequency.setValueAtTime(startFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+
+            playSplash() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.25);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playGameOver(victory = false) {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = victory ? [440, 554, 659, 880] : [400, 350, 300, 250];
+
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.2);
+                });
+            }
+        }
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audio = new AudioController();
+
+        // Game Configuration & State
+        const MAX_DROPS_CAPACITY = 20; // 20 drops = 100% full bucket
+        const GAME_DURATION = 30; // 30s limit
+
+        let gameActive = false;
+        let selectedDifficulty = 'easy'; // 'easy' or 'hard'
+        let score = 0;
+        let waterCount = 0;
+        let timeRemaining = GAME_DURATION;
+        let timerInterval = null;
+        let highScore = parseInt(localStorage.getItem('rain_catcher_highscore') || '0');
+
+        const bucket = {
+            x: 0,
+            y: 0,
+            width: 110,
+            height: 120,
+            targetX: 0,
+            speed: 0.25,
+            wavePhase: 0
+        };
+
+        let rainDrops = [];
+        let ripples = [];
+        let particles = [];
+
+        const keys = { left: false, right: false };
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            bucket.y = canvas.height - bucket.height - 35;
+            if (!gameActive) {
+                bucket.x = canvas.width / 2 - bucket.width / 2;
+                bucket.targetX = bucket.x;
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        document.getElementById('highScoreText').textContent = highScore;
+
+        class Drop {
+            constructor(isBurst = false) {
+                this.radius = Math.random() * 6 + 18; // BIG raindrops
+                this.x = Math.random() * (canvas.width - this.radius * 4) + this.radius * 2;
+                this.y = -this.radius * 2;
+
+                // Adjust falling speed based on chosen difficulty
+                if (selectedDifficulty === 'hard') {
+                    // Hard Mode: Drops fall significantly faster
+                    this.speed = Math.random() * 2.5 + 4.5 + (isBurst ? 1.5 : 0);
+                } else {
+                    // Easy Mode: Drops fall slowly and gently
+                    this.speed = Math.random() * 1.2 + 1.8 + (isBurst ? 1.0 : 0);
+                }
+
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = Math.random() * 0.05 + 0.02;
+
+                const rand = Math.random();
+                if (!isBurst && rand < 0.12) {
+                    this.type = 'gold';
+                } else if (!isBurst && rand < 0.18) {
+                    this.type = 'storm';
+                } else {
+                    this.type = 'normal';
+                }
+            }
+
+            update() {
+                this.y += this.speed;
+                this.wobble += this.wobbleSpeed;
+                this.x += Math.sin(this.wobble) * 0.5;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Tear-drop shape
+                ctx.beginPath();
+                ctx.moveTo(0, -this.radius * 1.4);
+                ctx.bezierCurveTo(
+                    this.radius * 1.2, -this.radius * 0.2,
+                    this.radius, this.radius,
+                    0, this.radius
+                );
+                ctx.bezierCurveTo(
+                    -this.radius, this.radius,
+                    -this.radius * 1.2, -this.radius * 0.2,
+                    0, -this.radius * 1.4
+                );
+                ctx.closePath();
+
+                if (this.type === 'gold') {
+                    const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, this.radius);
+                    grad.addColorStop(0, '#fef08a');
+                    grad.addColorStop(0.6, '#f59e0b');
+                    grad.addColorStop(1, '#b45309');
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = '#fbbf24';
+                    ctx.shadowBlur = 15;
+                } else if (this.type === 'storm') {
+                    const grad = ctx.createRadialGradient(-3, -3, 2, 0, 0, this.radius);
+                    grad.addColorStop(0, '#c7d2fe');
+                    grad.addColorStop(0.6, '#6366f1');
+                    grad.addColorStop(1, '#3730a3');
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = '#818cf8';
+                    ctx.shadowBlur = 15;
+                } else {
+                    const grad = ctx.createRadialGradient(-4, -4, 2, 0, 0, this.radius);
+                    grad.addColorStop(0, '#e0f2fe');
+                    grad.addColorStop(0.4, '#38bdf8');
+                    grad.addColorStop(1, '#0284c7');
+                    ctx.fillStyle = grad;
+                    ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+                    ctx.shadowBlur = 10;
+                }
+
+                ctx.fill();
+
+                // Glossy Highlight
+                ctx.beginPath();
+                ctx.ellipse(-this.radius * 0.3, -this.radius * 0.3, this.radius * 0.25, this.radius * 0.4, -Math.PI / 4, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class SplashParticle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = -(Math.random() * 4 + 2);
+                this.gravity = 0.25;
+                this.radius = Math.random() * 3 + 2;
+                this.alpha = 1;
+                this.color = color || '#38bdf8';
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= 0.03;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class BackgroundRipple {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = canvas.height - Math.random() * 40;
+                this.radius = 2;
+                this.maxRadius = Math.random() * 20 + 15;
+                this.alpha = 0.6;
+            }
+
+            update() {
+                this.radius += 0.4;
+                this.alpha -= 0.015;
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.beginPath();
+                ctx.ellipse(this.x, this.y, this.radius, this.radius * 0.3, 0, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(148, 163, 184, ${this.alpha * 0.4})`;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // Input Listeners
+        window.addEventListener('pointermove', (e) => {
+            if (!gameActive) return;
+            bucket.targetX = e.clientX - bucket.width / 2;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!gameActive || e.touches.length === 0) return;
+            bucket.targetX = e.touches[0].clientX - bucket.width / 2;
+        }, { passive: true });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+        });
+
+        // Difficulty Selection Toggle Listeners
+        const easyBtn = document.getElementById('easyBtn');
+        const hardBtn = document.getElementById('hardBtn');
+
+        function setDifficulty(mode) {
+            selectedDifficulty = mode;
+            if (mode === 'easy') {
+                easyBtn.className = 'diff-option px-4 py-3 rounded-2xl border-2 border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold text-sm flex flex-col items-center justify-center transition active:scale-95 shadow-lg';
+                hardBtn.className = 'diff-option px-4 py-3 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-slate-400 font-bold text-sm flex flex-col items-center justify-center transition active:scale-95 hover:border-slate-500';
+            } else {
+                hardBtn.className = 'diff-option px-4 py-3 rounded-2xl border-2 border-amber-500 bg-amber-500/20 text-amber-300 font-bold text-sm flex flex-col items-center justify-center transition active:scale-95 shadow-lg';
+                easyBtn.className = 'diff-option px-4 py-3 rounded-2xl border-2 border-slate-700 bg-slate-900/50 text-slate-400 font-bold text-sm flex flex-col items-center justify-center transition active:scale-95 hover:border-slate-500';
+            }
+        }
+
+        easyBtn.addEventListener('click', () => setDifficulty('easy'));
+        hardBtn.addEventListener('click', () => setDifficulty('hard'));
+
+        function drawBucket() {
+            if (keys.left) bucket.targetX -= 14;
+            if (keys.right) bucket.targetX += 14;
+
+            bucket.targetX = Math.max(10, Math.min(canvas.width - bucket.width - 10, bucket.targetX));
+            bucket.x += (bucket.targetX - bucket.x) * bucket.speed;
+
+            bucket.wavePhase += 0.05;
+
+            const bx = bucket.x;
+            const by = bucket.y;
+            const bw = bucket.width;
+            const bh = bucket.height;
+
+            const fillRatio = Math.min(1, waterCount / MAX_DROPS_CAPACITY);
+            const waterHeight = (bh - 15) * fillRatio;
+
+            ctx.save();
+
+            // 1. Fluid inside transparent bucket
+            if (waterHeight > 0) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(bx + 10, by + 10);
+                ctx.lineTo(bx + bw - 10, by + 10);
+                ctx.lineTo(bx + bw - 18, by + bh - 10);
+                ctx.lineTo(bx + 18, by + bh - 10);
+                ctx.closePath();
+                ctx.clip();
+
+                const waterTopY = by + bh - 10 - waterHeight;
+
+                ctx.beginPath();
+                ctx.moveTo(bx, by + bh);
+                for (let x = bx; x <= bx + bw; x += 5) {
+                    const waveY = waterTopY + Math.sin((x - bx) * 0.08 + bucket.wavePhase) * 4;
+                    ctx.lineTo(x, waveY);
+                }
+                ctx.lineTo(bx + bw, by + bh);
+                ctx.closePath();
+
+                const liquidGrad = ctx.createLinearGradient(bx, waterTopY, bx, by + bh);
+                liquidGrad.addColorStop(0, 'rgba(56, 189, 248, 0.85)');
+                liquidGrad.addColorStop(1, 'rgba(37, 99, 235, 0.95)');
+                ctx.fillStyle = liquidGrad;
+                ctx.fill();
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.restore();
+            }
+
+            // 2. Transparent Glass Bucket Outline
+            ctx.beginPath();
+            ctx.moveTo(bx + 8, by + 5);
+            ctx.lineTo(bx + bw - 8, by + 5);
+            ctx.lineTo(bx + bw - 16, by + bh - 8);
+            ctx.quadraticCurveTo(bx + bw / 2, by + bh + 4, bx + 16, by + bh - 8);
+            ctx.closePath();
+
+            const glassGrad = ctx.createLinearGradient(bx, by, bx + bw, by + bh);
+            glassGrad.addColorStop(0, 'rgba(255, 255, 255, 0.25)');
+            glassGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.08)');
+            glassGrad.addColorStop(1, 'rgba(255, 255, 255, 0.18)');
+            ctx.fillStyle = glassGrad;
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.lineWidth = 3.5;
+            ctx.stroke();
+
+            // Bucket Rim
+            ctx.beginPath();
+            ctx.ellipse(bx + bw / 2, by + 5, bw / 2 - 8, 8, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Glass Specular Highlight
+            ctx.beginPath();
+            ctx.moveTo(bx + 18, by + 15);
+            ctx.lineTo(bx + 24, by + bh - 15);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Side Metal Knobs
+            ctx.fillStyle = '#94a3b8';
+            ctx.beginPath();
+            ctx.arc(bx + 4, by + 12, 4, 0, Math.PI * 2);
+            ctx.arc(bx + bw - 4, by + 12, 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        let spawnTimer = 0;
+
+        function animate() {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const bgGrad = ctx.createRadialGradient(canvas.width / 2, 0, 100, canvas.width / 2, canvas.height, canvas.height);
+            bgGrad.addColorStop(0, '#1e293b');
+            bgGrad.addColorStop(1, '#090d16');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (Math.random() < 0.08) {
+                ripples.push(new BackgroundRipple());
+            }
+
+            for (let i = ripples.length - 1; i >= 0; i--) {
+                ripples[i].update();
+                ripples[i].draw();
+                if (ripples[i].alpha <= 0) ripples.splice(i, 1);
+            }
+
+            // Spawn drops faster in Hard difficulty
+            if (gameActive) {
+                spawnTimer++;
+                const spawnInterval = selectedDifficulty === 'hard' ? 25 : 45;
+                if (spawnTimer > spawnInterval) {
+                    rainDrops.push(new Drop());
+                    spawnTimer = 0;
+                }
+            }
+
+            for (let i = rainDrops.length - 1; i >= 0; i--) {
+                const drop = rainDrops[i];
+                drop.update();
+                drop.draw();
+
+                const hitBoxY = bucket.y + 10;
+                if (
+                    drop.y + drop.radius >= hitBoxY &&
+                    drop.y - drop.radius <= hitBoxY + 30 &&
+                    drop.x >= bucket.x - 5 &&
+                    drop.x <= bucket.x + bucket.width + 5
+                ) {
+                    if (drop.type === 'gold') {
+                        waterCount += 3;
+                        score += 3;
+                        audio.playCatch(true);
+                        createSplash(drop.x, hitBoxY, '#f59e0b', 12);
+                    } else if (drop.type === 'storm') {
+                        waterCount += 1;
+                        score += 1;
+                        audio.playSplash();
+                        createSplash(drop.x, hitBoxY, '#818cf8', 15);
+                        for (let k = 0; k < 5; k++) {
+                            setTimeout(() => {
+                                if (gameActive) rainDrops.push(new Drop(true));
+                            }, k * 160);
+                        }
+                    } else {
+                        waterCount += 1;
+                        score += 1;
+                        audio.playCatch(false);
+                        createSplash(drop.x, hitBoxY, '#38bdf8', 8);
+                    }
+
+                    rainDrops.splice(i, 1);
+                    updateHUD();
+
+                    if (waterCount >= MAX_DROPS_CAPACITY) {
+                        waterCount = MAX_DROPS_CAPACITY;
+                        updateHUD();
+                        endGame(true);
+                    }
+                    continue;
+                }
+
+                if (drop.y - drop.radius > canvas.height) {
+                    createSplash(drop.x, canvas.height - 5, 'rgba(148, 163, 184, 0.4)', 4);
+                    rainDrops.splice(i, 1);
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].alpha <= 0) particles.splice(i, 1);
+            }
+
+            drawBucket();
+
+            requestAnimationFrame(animate);
+        }
+
+        function createSplash(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new SplashParticle(x, y, color));
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('dropsCount').textContent = score;
+            const fillPercent = Math.min(100, Math.round((waterCount / MAX_DROPS_CAPACITY) * 100));
+            document.getElementById('capacityPercent').textContent = fillPercent + '%';
+            document.getElementById('capacityFill').style.width = fillPercent + '%';
+            document.getElementById('timerText').textContent = timeRemaining + 's';
+        }
+
+        function startGame() {
+            audio.init();
+            score = 0;
+            waterCount = 0;
+            timeRemaining = GAME_DURATION;
+            rainDrops = [];
+            particles = [];
+            gameActive = true;
+
+            updateHUD();
+
+            document.getElementById('startModal').classList.add('opacity-0', 'pointer-events-none');
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('hud').classList.remove('opacity-0');
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!gameActive) return;
+                timeRemaining--;
+                updateHUD();
+
+                if (timeRemaining <= 0) {
+                    endGame(false);
+                }
+            }, 1000);
+        }
+
+        function endGame(isBucketFull) {
+            gameActive = false;
+            clearInterval(timerInterval);
+
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('rain_catcher_highscore', highScore.toString());
+                document.getElementById('highScoreText').textContent = highScore;
+            }
+
+            audio.playGameOver(isBucketFull);
+
+            const overModal = document.getElementById('gameOverModal');
+            const overTitle = document.getElementById('overTitle');
+            const overSubtitle = document.getElementById('overSubtitle');
+            const overBadge = document.getElementById('overBadge');
+            const overIcon = document.getElementById('overIcon');
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalTime').textContent = timeRemaining + 's';
+
+            if (isBucketFull) {
+                overTitle.textContent = "Bucket Overflow!";
+                overSubtitle.textContent = `Awesome job on ${selectedDifficulty.toUpperCase()} mode! You filled the bucket!`;
+                overBadge.className = "w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/30";
+                overIcon.className = "fa-solid fa-glass-water text-4xl text-white";
+            } else {
+                overTitle.textContent = "Time's Up!";
+                overSubtitle.textContent = "30 seconds are up! Let's see how much water you caught.";
+                overBadge.className = "w-20 h-20 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/30";
+                overIcon.className = "fa-solid fa-hourglass-end text-4xl text-white";
+            }
+
+            overModal.classList.remove('hidden');
+        }
+
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.getElementById('gameOverModal').classList.add('hidden');
+            document.getElementById('startModal').classList.remove('opacity-0', 'pointer-events-none');
+        });
+
+        const muteBtn = document.getElementById('muteBtn');
+        const muteIcon = document.getElementById('muteIcon');
+        muteBtn.addEventListener('click', () => {
+            audio.init();
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                muteIcon.className = 'fa-solid fa-volume-xmark text-lg text-rose-400';
+            } else {
+                muteIcon.className = 'fa-solid fa-volume-high text-lg text-slate-300';
+            }
+        });
+
+        window.onload = function () {
+            animate();
+        };
+    </script>
+</body>
+</html>
