@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sushi Train Master</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts & Font Awesome Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        nunito: ['Nunito', 'sans-serif'],
+                    },
+                    colors: {
+                        izakayaRed: '#E63946',
+                        izakayaGold: '#FFB703',
+                        izakayaGreen: '#06D6A0',
+                        izakayaBlue: '#118AB2',
+                        izakayaDark: '#0B0F19'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        h1, h2, h3, .font-heading {
+            font-family: 'Fredoka', sans-serif;
+        }
+        /* Custom styled scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-in {
+            animation: popIn 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes floatUpFade {
+            0% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -45px) scale(1.2); opacity: 0; }
+        }
+        .float-up-fade {
+            animation: floatUpFade 1.2s ease-out forwards;
+        }
+
+        @keyframes bambooRoll {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.03) rotate(1deg); }
+            100% { transform: scale(1); }
+        }
+        .bamboo-action {
+            animation: bambooRoll 0.35s ease-in-out;
+        }
+    </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 overflow-hidden flex flex-col">
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app" class="flex flex-col h-screen w-screen max-w-[1680px] max-h-[1080px] mx-auto bg-slate-900 shadow-2xl relative overflow-hidden border-x border-b border-slate-800 sm:rounded-b-2xl">
+        
+        <!-- HEADER HUD BANNER -->
+        <header class="bg-slate-950/95 border-b border-slate-800/80 px-3 sm:px-5 py-2 flex items-center justify-between shrink-0 z-30 shadow-lg">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-rose-600 via-amber-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-rose-600/30 text-white text-2xl font-bold">
+                    🍣
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-xl font-bold tracking-wide bg-gradient-to-r from-rose-400 via-amber-300 to-emerald-400 bg-clip-text text-transparent font-heading flex items-center gap-2">
+                        Sushi Train Master
+                        <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 hidden md:inline-block">Interactive Shinkansen</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-400 hidden sm:block">Manage stocks, roll on bamboo mats, load train carriages & feed diners!</p>
+                </div>
+            </div>
+
+            <!-- STATS HUD BAR -->
+            <div class="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm font-semibold">
+                <!-- Shift Level -->
+                <div class="bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-flag text-amber-400 text-xs"></i>
+                    <span class="text-slate-400">Shift: <span id="hud-level" class="text-white font-bold font-heading">1</span></span>
+                </div>
+
+                <!-- Earnings Cash -->
+                <div class="bg-slate-900 border border-emerald-500/30 px-3 py-1.5 rounded-xl flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-coins text-emerald-400 text-xs"></i>
+                    <span class="text-emerald-400 font-bold font-heading">$<span id="hud-money">250</span></span>
+                </div>
+
+                <!-- Restaurant Reputation -->
+                <div class="bg-slate-900 border border-rose-500/30 px-3 py-1.5 rounded-xl flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-heart text-rose-400 text-xs"></i>
+                    <span class="text-rose-300 font-bold font-heading"><span id="hud-reputation">100</span>%</span>
+                </div>
+
+                <!-- Target Progress -->
+                <div class="bg-slate-900 border border-purple-500/30 px-3 py-1.5 rounded-xl hidden md:flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-utensils text-purple-400 text-xs"></i>
+                    <span class="text-slate-300 font-bold font-heading"><span id="hud-served">0</span>/<span id="hud-target">8</span> Served</span>
+                </div>
+
+                <!-- Audio Toggles -->
+                <button onclick="toggleBGM()" id="bgm-btn" title="Toggle Arcade Music" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-purple-300 transition">
+                    <i class="fa-solid fa-music text-xs"></i>
+                </button>
+                <button onclick="toggleAudio()" id="sound-btn" title="Toggle Sound FX" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-300 transition">
+                    <i class="fa-solid fa-volume-high text-xs"></i>
+                </button>
+
+                <!-- Shop Button -->
+                <button onclick="openShopModal()" class="bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 hover:brightness-110 px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-lg shadow-purple-900/40 border border-purple-400/30 transition transform active:scale-95 flex items-center space-x-1.5">
+                    <i class="fa-solid fa-store"></i>
+                    <span class="hidden lg:inline">Upgrades & Shop</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- HIGH VISIBILITY CUSTOMER ORDERS STRIP -->
+        <div class="bg-slate-950 border-b border-slate-800/90 p-2 sm:p-2.5 z-20 shadow-md shrink-0">
+            <div class="flex items-center justify-between mb-1.5 px-1">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-users text-amber-400 text-xs sm:text-sm"></i>
+                    <h2 class="text-xs sm:text-sm font-bold text-slate-200 font-heading">
+                        Counter Seating & Live Cravings Dashboard
+                    </h2>
+                </div>
+                <span class="text-[10px] text-slate-400 hidden sm:inline">Train automatically serves dishes when passing matching seated patrons!</span>
+            </div>
+            <div id="customer-orders-grid" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2"></div>
+        </div>
+
+        <!-- MAIN SPLIT WORKSPACE -->
+        <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+            
+            <!-- LEFT SECTION: ANIMATED RAILWAY TRACK CANVAS -->
+            <div class="flex-1 bg-slate-950 flex flex-col relative overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-800/80">
+                <div class="p-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-10 text-xs">
+                    <div class="flex items-center space-x-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span class="font-bold text-slate-200">Shinkansen Conveyor Loop</span>
+                        <span id="train-status-text" class="text-[11px] text-emerald-400 font-medium">60 FPS Track Running</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <span class="bg-slate-800 border border-slate-700 px-2.5 py-0.5 rounded-lg text-slate-300 font-semibold text-[11px]">
+                            Skin: <span id="skin-name-hud" class="text-amber-400 font-bold">Shinkansen Classic</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="flex-1 relative w-full h-full min-h-[260px] bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:18px_18px]">
+                    <canvas id="sushiTrainCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+                    <div class="absolute bottom-2 left-2 bg-slate-950/85 backdrop-blur border border-slate-800 px-3 py-1.5 rounded-xl text-[11px] font-semibold text-slate-300 flex items-center space-x-3 shadow-xl">
+                        <div><i class="fa-solid fa-gauge-high text-izakayaBlue mr-1"></i>Speed: <span id="hud-speed-val" class="text-white font-bold">100%</span></div>
+                        <div class="h-3 w-[1px] bg-slate-700"></div>
+                        <div><i class="fa-solid fa-train text-amber-400 mr-1"></i>Carriages: <span id="hud-carts-val" class="text-white font-bold">4</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT SECTION: ULTIMATE INTERACTIVE BAMBOO MAT & INGREDIENT MARKET -->
+            <div class="w-full lg:w-[500px] bg-slate-900/95 p-3 sm:p-4 flex flex-col gap-3 overflow-y-auto shrink-0 shadow-2xl">
+                
+                <!-- 1. BAMBOO ROLLING MAT STATION -->
+                <div class="bg-gradient-to-b from-amber-950/30 to-slate-950 rounded-2xl border border-amber-900/40 p-3 shadow-xl flex flex-col justify-between">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-1.5">
+                            <i class="fa-solid fa-scroll text-amber-400 text-xs sm:text-sm"></i>
+                            <h2 class="text-xs sm:text-sm font-bold text-slate-200 font-heading">Bamboo Rolling Mat</h2>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span id="matched-recipe-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400">Assemble Ingredients</span>
+                            <button onclick="clearBambooMat()" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 px-2.5 py-1 rounded-xl text-[11px] font-semibold transition flex items-center space-x-1">
+                                <i class="fa-solid fa-rotate-left"></i>
+                                <span>Reset</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Visual Rolling Mat Box -->
+                    <div id="bamboo-mat-box" class="w-full h-24 sm:h-28 rounded-2xl border-2 border-dashed border-amber-700/40 bg-amber-950/10 flex items-center justify-center relative p-2 shadow-inner overflow-hidden">
+                        <div id="mat-ingredients-list" class="flex flex-wrap items-center justify-center gap-2 z-10 max-h-full">
+                            <p class="text-xs text-amber-300/60 font-medium text-center">Tap ingredients below or pick from recipe book!</p>
+                        </div>
+                    </div>
+
+                    <!-- Roll & Load Button -->
+                    <button onclick="rollAndLoadDish()" id="roll-load-btn" class="mt-2.5 w-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 hover:brightness-110 text-white font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-rose-900/30 border border-rose-400/30 flex items-center justify-center space-x-2 text-xs sm:text-sm transition transform active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed" disabled>
+                        <i class="fa-solid fa-utensils text-sm"></i>
+                        <span>Roll Sushi & Load onto Train Carriage</span>
+                    </button>
+                </div>
+
+                <!-- 2. SMART RECIPE BOOK QUICK-FILL -->
+                <div class="bg-slate-950/90 rounded-2xl border border-slate-800 p-3 shadow-xl">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs sm:text-sm font-bold text-slate-200 font-heading flex items-center">
+                            <i class="fa-solid fa-book-open text-amber-400 mr-1.5"></i> Recipe Book & Quick-Fill
+                        </h3>
+                        <span class="text-[10px] text-slate-400">Click to instantly auto-fill mat</span>
+                    </div>
+                    <div id="quick-recipes-grid" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- 3. INTERACTIVE INGREDIENT MARKET & STOCK SYSTEM -->
+                <div class="flex-1 bg-slate-950/90 rounded-2xl border border-slate-800 p-3 shadow-xl flex flex-col min-h-[190px]">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs sm:text-sm font-bold text-slate-200 font-heading flex items-center">
+                            <i class="fa-solid fa-basket-shopping text-emerald-400 mr-1.5"></i> Ingredient Pantry & Stock Market
+                        </h3>
+                        <button onclick="restockAllPantry()" class="bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                            <span>Restock All ($15)</span>
+                        </button>
+                    </div>
+                    <div id="ingredients-market-grid" class="grid grid-cols-3 sm:grid-cols-4 gap-2 overflow-y-auto pr-1 flex-1"></div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- UPGRADES & SHOP MODAL -->
+    <div id="shop-modal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] pop-in">
+            <div class="bg-slate-950 px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-2xl bg-purple-600/30 text-purple-300 flex items-center justify-center font-bold text-base">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-white font-heading">Railway & Izakaya Shop</h2>
+                        <p class="text-[11px] text-slate-400">Unlock train skins, speed upgrades, and gourmet recipes</p>
+                    </div>
+                </div>
+                <button onclick="closeShopModal()" class="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex border-b border-slate-800 bg-slate-950/50 text-xs font-bold">
+                <button onclick="switchShopTab('upgrades')" id="tab-upgrades" class="flex-1 py-3 text-amber-400 border-b-2 border-amber-400">Upgrades</button>
+                <button onclick="switchShopTab('skins')" id="tab-skins" class="flex-1 py-3 text-slate-400 hover:text-white">Train Skins</button>
+                <button onclick="switchShopTab('recipes')" id="tab-recipes" class="flex-1 py-3 text-slate-400 hover:text-white">Gourmet Recipes</button>
+            </div>
+
+            <div class="p-4 overflow-y-auto flex-1 space-y-3" id="shop-content-area"></div>
+
+            <div class="bg-slate-950 px-5 py-3 border-t border-slate-800 flex items-center justify-between text-xs">
+                <div class="text-slate-300">
+                    Your Funds: <span class="text-emerald-400 font-bold font-heading text-sm">$<span id="shop-user-funds">0</span></span>
+                </div>
+                <button onclick="closeShopModal()" class="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-xl font-bold transition">
+                    Back to Counter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHIFT COMPLETE SUMMARY MODAL -->
+    <div id="summary-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-md rounded-3xl shadow-2xl p-6 text-center space-y-5 pop-in">
+            <div class="w-16 h-16 bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 rounded-full mx-auto flex items-center justify-center text-3xl shadow-lg shadow-amber-500/30 text-white">
+                🎉
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-white font-heading">Shift Completed!</h2>
+                <p class="text-slate-400 text-xs mt-1">Great job operating the Shinkansen Express train!</p>
+            </div>
+            <div class="bg-slate-950/90 rounded-2xl p-4 border border-slate-800 space-y-2 text-left text-xs">
+                <div class="flex justify-between"><span class="text-slate-400">Dishes Served:</span><span id="summary-dishes-val" class="font-bold text-white">0</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Total Earnings:</span><span id="summary-money-val" class="font-bold text-emerald-400">$0</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Izakaya Reputation:</span><span id="summary-reputation-val" class="font-bold text-rose-400">100%</span></div>
+            </div>
+            <button onclick="advanceNextLevel()" class="w-full bg-gradient-to-r from-rose-500 via-amber-500 to-emerald-500 hover:brightness-110 text-white font-bold py-3 rounded-2xl shadow-lg shadow-rose-900/30 transition transform active:scale-95 text-xs sm:text-sm">
+                Start Next Shift <i class="fa-solid fa-arrow-right ml-1.5"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        /* 1. WEB AUDIO API SOUND SYSTEM */
+        let audioCtx = null;
+        let soundEnabled = true;
+        let bgmEnabled = false;
+        let bgmInterval = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'tap') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(1100, now + 0.04);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.04);
+                osc.start(now);
+                osc.stop(now + 0.04);
+            } else if (type === 'chop') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.05);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'roll') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(550, now + 0.12);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+            } else if (type === 'serve') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'eat') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.08);
+                osc.frequency.setValueAtTime(783.99, now + 0.16);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+                osc.start(now);
+                osc.stop(now + 0.28);
+            } else if (type === 'fail') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.start(now);
+                osc.stop(now + 0.2);
+            } else if (type === 'buy') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(587.33, now);
+                osc.frequency.setValueAtTime(880.00, now + 0.1);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        }
+
+        function toggleAudio() {
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('sound-btn');
+            if (soundEnabled) {
+                btn.innerHTML = '<i class="fa-solid fa-volume-high text-xs"></i>';
+                playSound('tap');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-volume-xmark text-xs"></i>';
+            }
+        }
+
+        function toggleBGM() {
+            initAudio();
+            bgmEnabled = !bgmEnabled;
+            const btn = document.getElementById('bgm-btn');
+            if (bgmEnabled) {
+                btn.className = "w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-purple-600 text-white border border-purple-400 flex items-center justify-center transition shadow-lg shadow-purple-600/30";
+                startChiptuneLoop();
+                playSound('tap');
+            } else {
+                btn.className = "w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-purple-300 transition";
+                if (bgmInterval) clearInterval(bgmInterval);
+            }
+        }
+
+        function startChiptuneLoop() {
+            if (bgmInterval) clearInterval(bgmInterval);
+            const notes = [261.63, 329.63, 392.00, 523.25, 440.00, 349.23, 293.66, 392.00];
+            let step = 0;
+            bgmInterval = setInterval(() => {
+                if (!bgmEnabled || !audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(notes[step % notes.length], now);
+                gain.gain.setValueAtTime(0.012, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                osc.start(now);
+                osc.stop(now + 0.12);
+                step++;
+            }, 220);
+        }
+
+        /* 2. GAME DATA DEFINITIONS */
+        const INGREDIENTS = {
+            rice: { id: 'rice', name: 'Sushi Rice', icon: '🍚', color: 'bg-slate-100 text-slate-900', stock: 15, maxStock: 20 },
+            nori: { id: 'nori', name: 'Nori Sheet', icon: '⬛', color: 'bg-slate-800 text-slate-100', stock: 15, maxStock: 20 },
+            salmon: { id: 'salmon', name: 'Raw Salmon', icon: '🐟', color: 'bg-orange-500 text-white', stock: 12, maxStock: 15 },
+            tuna: { id: 'tuna', name: 'Ahi Tuna', icon: '🥩', color: 'bg-rose-600 text-white', stock: 12, maxStock: 15 },
+            ebi: { id: 'ebi', name: 'Ebi Shrimp', icon: '🦐', color: 'bg-pink-400 text-slate-900', stock: 10, maxStock: 15 },
+            avocado: { id: 'avocado', name: 'Avocado', icon: '🥑', color: 'bg-emerald-600 text-white', stock: 10, maxStock: 15 },
+            cucumber: { id: 'cucumber', name: 'Cucumber', icon: '🥒', color: 'bg-green-600 text-white', stock: 12, maxStock: 15 },
+            ikura: { id: 'ikura', name: 'Ikura Roe', icon: '🟠', color: 'bg-amber-500 text-white', stock: 8, maxStock: 12 },
+            tamago: { id: 'tamago', name: 'Tamago Egg', icon: '🍳', color: 'bg-yellow-400 text-slate-900', stock: 10, maxStock: 15 },
+            crab: { id: 'crab', name: 'Crab Stick', icon: '🦀', color: 'bg-red-500 text-white', stock: 10, maxStock: 15 },
+            cream_cheese: { id: 'cream_cheese', name: 'Cream Cheese', icon: '🧀', color: 'bg-amber-100 text-slate-900', stock: 10, maxStock: 15 },
+            eel: { id: 'eel', name: 'Unagi Eel', icon: '🍢', color: 'bg-amber-800 text-white', stock: 8, maxStock: 12 }
+        };
+
+        const RECIPES = [
+            { id: 'salmon_nigiri', name: 'Salmon Nigiri', icon: '🍣', ingredients: ['rice', 'salmon'], price: 22, unlocked: true },
+            { id: 'tuna_maki', name: 'Tekka Maki', icon: '🍱', ingredients: ['nori', 'rice', 'tuna'], price: 28, unlocked: true },
+            { id: 'ebi_nigiri', name: 'Ebi Nigiri', icon: '🦐', ingredients: ['rice', 'ebi'], price: 25, unlocked: true },
+            { id: 'kappa_maki', name: 'Cucumber Roll', icon: '🥒', ingredients: ['nori', 'rice', 'cucumber'], price: 20, unlocked: true },
+            { id: 'philadelphia_roll', name: 'Philadelphia Roll', icon: '🧀', ingredients: ['nori', 'rice', 'salmon', 'cream_cheese', 'avocado'], price: 45, unlocked: false },
+            { id: 'dragon_roll', name: 'Dragon Roll', icon: '🐉', ingredients: ['nori', 'rice', 'eel', 'avocado', 'ikura'], price: 68, unlocked: false },
+            { id: 'california_roll', name: 'California Roll', icon: '🦀', ingredients: ['nori', 'rice', 'crab', 'avocado', 'cucumber'], price: 36, unlocked: false }
+        ];
+
+        const TRAIN_SKINS = [
+            { id: 'bullet', name: 'Shinkansen Classic', engineColor: '#0284c7', cabinColor: '#38bdf8', cost: 0, unlocked: true },
+            { id: 'steam', name: 'Retro Steam Locomotive', engineColor: '#dc2626', cabinColor: '#f87171', cost: 160, unlocked: false },
+            { id: 'kawaii', name: 'Kawaii Pink Kitty', engineColor: '#ec4899', cabinColor: '#f472b6', cost: 260, unlocked: false },
+            { id: 'gold', name: 'Golden Express', engineColor: '#ca8a04', cabinColor: '#fde047', cost: 450, unlocked: false }
+        ];
+
+        const CUSTOMER_AVATARS = [
+            { name: 'Business Guy', avatar: '👨‍💼' },
+            { name: 'Anime Girl', avatar: '👧' },
+            { name: 'Ninja', avatar: '🥷' },
+            { name: 'Sumo Wrestler', avatar: '🤼' },
+            { name: 'Cat Patron', avatar: '🐱' },
+            { name: 'Chef Patron', avatar: '👩‍🍳' }
+        ];
+
+        /* 3. GAME STATE */
+        let gameState = {
+            level: 1,
+            money: 250,
+            reputation: 100,
+            dishesServed: 0,
+            bambooMat: [],
+            activeShopTab: 'upgrades',
+            activeSkinId: 'bullet',
+            trainSpeed: 1.0,
+            carriageCount: 4,
+            patienceMultiplier: 1.0,
+            tipMultiplier: 1.0,
+            carriages: []
+        };
+
+        let seats = [];
+
+        function initGame() {
+            initTrainCarriages();
+            initSeats();
+            renderRecipeQuickSelect();
+            renderIngredientsMarket();
+            updateStatsUI();
+            setupCanvas();
+
+            spawnCustomerAtSeat(0);
+            spawnCustomerAtSeat(2);
+            spawnCustomerAtSeat(4);
+
+            requestAnimationFrame(gameCanvasLoop);
+            setInterval(customerPatienceTimerLoop, 1000);
+        }
+
+        function initTrainCarriages() {
+            gameState.carriages = [];
+            for (let i = 0; i < gameState.carriageCount; i++) {
+                gameState.carriages.push({ id: i, sushi: null });
+            }
+        }
+
+        function initSeats() {
+            seats = [
+                { id: 0, label: 'Seat 1', pathT: 0.08, customer: null },
+                { id: 1, label: 'Seat 2', pathT: 0.25, customer: null },
+                { id: 2, label: 'Seat 3', pathT: 0.42, customer: null },
+                { id: 3, label: 'Seat 4', pathT: 0.58, customer: null },
+                { id: 4, label: 'Seat 5', pathT: 0.75, customer: null },
+                { id: 5, label: 'Seat 6', pathT: 0.92, customer: null }
+            ];
+            renderCustomerOrdersStrip();
+        }
+
+        /* 4. CUSTOMER ORDERS DASHBOARD */
+        function renderCustomerOrdersStrip() {
+            const grid = document.getElementById('customer-orders-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            seats.forEach(seat => {
+                const card = document.createElement('div');
+                card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-2 flex flex-col justify-between shadow-lg min-h-[105px]';
+
+                if (seat.customer) {
+                    const cust = seat.customer;
+                    const pct = Math.max(0, Math.min(100, (cust.patience / cust.maxPatience) * 100));
+                    const barColor = pct > 50 ? 'bg-emerald-500' : pct > 25 ? 'bg-amber-500' : 'bg-rose-500 animate-pulse';
+                    const mood = pct > 60 ? '😊' : pct > 30 ? '😐' : '😠';
+
+                    const ingBadgesHtml = cust.craving.ingredients.map(ingId => {
+                        const ing = INGREDIENTS[ingId];
+                        return `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold ${ing ? ing.color : 'bg-slate-800'}">${ing ? ing.icon : ''}</span>`;
+                    }).join(' ');
+
+                    card.innerHTML = `
+                        <div class="flex items-center justify-between text-[10px] text-slate-400 border-b border-slate-800/80 pb-1">
+                            <span class="font-bold text-slate-300">${seat.label}</span>
+                            <span class="text-xs">${mood} ${cust.avatar}</span>
+                        </div>
+                        <div class="flex items-center space-x-2 my-1">
+                            <span class="text-2xl sm:text-3xl">${cust.craving.icon}</span>
+                            <div class="flex-1 overflow-hidden">
+                                <div class="font-bold text-xs text-white truncate font-heading">${cust.craving.name}</div>
+                                <div class="flex flex-wrap gap-1 mt-0.5">${ingBadgesHtml}</div>
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800 mt-0.5">
+                            <div class="${barColor} h-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    `;
+                } else {
+                    card.innerHTML = `
+                        <div class="text-[10px] font-bold text-slate-500">${seat.label}</div>
+                        <div class="flex-1 flex flex-col items-center justify-center my-1 text-slate-600">
+                            <i class="fa-solid fa-chair text-lg mb-1 opacity-40"></i>
+                            <span class="text-[10px] font-semibold italic">Seat Open</span>
+                        </div>
+                    `;
+                }
+                grid.appendChild(card);
+            });
+        }
+
+        /* 5. CANVAS SHINKANSEN TRACK SIMULATION */
+        let canvas, ctx;
+        let trainDistance = 0;
+        let particles = [];
+
+        function setupCanvas() {
+            canvas = document.getElementById('sushiTrainCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+        }
+
+        function resizeCanvas() {
+            if (!canvas) return;
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+        }
+
+        function getTrackPoint(t, width, height) {
+            t = (t % 1 + 1) % 1;
+            const paddingX = Math.max(50, width * 0.12);
+            const paddingY = Math.max(45, height * 0.18);
+            const w = width - paddingX * 2;
+            const h = height - paddingY * 2;
+            const radius = h / 2;
+
+            const straightLen = w - 2 * radius;
+            const arcLen = Math.PI * radius;
+            const totalPerimeter = 2 * straightLen + 2 * arcLen;
+            const dist = t * totalPerimeter;
+
+            if (dist < straightLen) {
+                return { x: paddingX + radius + dist, y: paddingY, angle: 0 };
+            } else if (dist < straightLen + arcLen) {
+                const arcDist = dist - straightLen;
+                const angle = (arcDist / arcLen) * Math.PI - Math.PI / 2;
+                return {
+                    x: paddingX + radius + straightLen + Math.cos(angle) * radius,
+                    y: paddingY + radius + Math.sin(angle) * radius,
+                    angle: angle + Math.PI / 2
+                };
+            } else if (dist < 2 * straightLen + arcLen) {
+                const straightDist = dist - (straightLen + arcLen);
+                return { x: paddingX + radius + straightLen - straightDist, y: paddingY + 2 * radius, angle: Math.PI };
+            } else {
+                const arcDist = dist - (2 * straightLen + arcLen);
+                const angle = (arcDist / arcLen) * Math.PI + Math.PI / 2;
+                return {
+                    x: paddingX + radius + Math.cos(angle) * radius,
+                    y: paddingY + radius + Math.sin(angle) * radius,
+                    angle: angle + Math.PI / 2
+                };
+            }
+        }
+
+        function gameCanvasLoop() {
+            if (!ctx) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.fillStyle = '#0b0f19';
+            ctx.fillRect(0, 0, w, h);
+
+            drawTrackLoop(ctx, w, h);
+
+            const trainSpeedPx = 0.0013 * gameState.trainSpeed;
+            trainDistance = (trainDistance + trainSpeedPx) % 1;
+
+            const activeSkin = TRAIN_SKINS.find(s => s.id === gameState.activeSkinId) || TRAIN_SKINS[0];
+            const totalCarriages = gameState.carriages.length;
+            const gapT = 0.045;
+
+            for (let i = totalCarriages - 1; i >= 0; i--) {
+                const carriageT = (trainDistance - (i + 1) * gapT + 1) % 1;
+                const pt = getTrackPoint(carriageT, w, h);
+                drawCarriage(ctx, pt.x, pt.y, pt.angle, gameState.carriages[i], activeSkin);
+                checkAutoServiceAtPoint(carriageT, gameState.carriages[i]);
+            }
+
+            const enginePt = getTrackPoint(trainDistance, w, h);
+            drawEngine(ctx, enginePt.x, enginePt.y, enginePt.angle, activeSkin);
+
+            drawSeatsAndCustomers(ctx, w, h);
+            updateAndDrawParticles(ctx);
+
+            requestAnimationFrame(gameCanvasLoop);
+        }
+
+        function drawTrackLoop(ctx, w, h) {
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 28;
+            ctx.lineCap = 'round';
+            drawOvalPath(ctx, w, h);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#475569';
+            ctx.lineWidth = 16;
+            drawOvalPath(ctx, w, h);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#020617';
+            ctx.lineWidth = 8;
+            drawOvalPath(ctx, w, h);
+            ctx.stroke();
+
+            ctx.strokeStyle = '#06d6a0';
+            ctx.lineWidth = 1.5;
+            drawOvalPath(ctx, w, h);
+            ctx.stroke();
+        }
+
+        function drawOvalPath(ctx, w, h) {
+            ctx.beginPath();
+            const steps = 120;
+            for (let i = 0; i <= steps; i++) {
+                const pt = getTrackPoint(i / steps, w, h);
+                if (i === 0) ctx.moveTo(pt.x, pt.y);
+                else ctx.lineTo(pt.x, pt.y);
+            }
+            ctx.closePath();
+        }
+
+        function drawEngine(ctx, x, y, angle, skin) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillRect(-20, -11, 40, 24);
+
+            ctx.fillStyle = skin.engineColor;
+            ctx.beginPath();
+            ctx.moveTo(-18, -11);
+            ctx.lineTo(10, -11);
+            ctx.quadraticCurveTo(24, 0, 10, 11);
+            ctx.lineTo(-18, 11);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = '#0f172a';
+            ctx.beginPath();
+            ctx.arc(8, 0, 7, -Math.PI/2, Math.PI/2);
+            ctx.fill();
+
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.arc(20, 0, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawCarriage(ctx, x, y, angle, carriageData, skin) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(-15, -10, 30, 20);
+
+            ctx.fillStyle = skin.cabinColor;
+            ctx.beginPath();
+            ctx.roundRect(-13, -9, 26, 18, 4);
+            ctx.fill();
+
+            if (carriageData && carriageData.sushi) {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(carriageData.sushi.icon, 0, 0);
+            } else {
+                ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawSeatsAndCustomers(ctx, w, h) {
+            seats.forEach(seat => {
+                const pt = getTrackPoint(seat.pathT, w, h);
+                const normalAngle = pt.angle + Math.PI / 2;
+                const seatDist = 36;
+                const sx = pt.x + Math.cos(normalAngle) * seatDist;
+                const sy = pt.y + Math.sin(normalAngle) * seatDist;
+
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.arc(sx, sy, 15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#334155';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                if (seat.customer) {
+                    const cust = seat.customer;
+                    ctx.font = '19px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(cust.avatar, sx, sy);
+
+                    const bubbleX = sx;
+                    const bubbleY = sy - 28;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.roundRect(bubbleX - 20, bubbleY - 14, 40, 24, 8);
+                    ctx.fill();
+                    ctx.strokeStyle = '#020617';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+
+                    ctx.font = '14px sans-serif';
+                    ctx.fillText(cust.craving.icon, bubbleX, bubbleY - 2);
+
+                    const pct = Math.max(0, cust.patience / cust.maxPatience);
+                    ctx.strokeStyle = pct > 0.5 ? '#10b981' : pct > 0.25 ? '#f59e0b' : '#ef4444';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, 17, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * pct));
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function checkAutoServiceAtPoint(carriageT, carriage) {
+            if (!carriage || !carriage.sushi) return;
+            seats.forEach(seat => {
+                if (seat.customer) {
+                    const diff = Math.abs(carriageT - seat.pathT);
+                    if (diff < 0.025) {
+                        if (carriage.sushi.id === seat.customer.craving.id) {
+                            fulfillCustomerOrder(seat, carriage);
+                        }
+                    }
+                }
+            });
+        }
+
+        function fulfillCustomerOrder(seat, carriage) {
+            const cust = seat.customer;
+            const sushi = carriage.sushi;
+            playSound('eat');
+
+            const basePrice = sushi.price;
+            const tip = Math.floor(basePrice * 0.35 * gameState.tipMultiplier);
+            const total = basePrice + tip;
+
+            gameState.money += total;
+            gameState.dishesServed++;
+            gameState.reputation = Math.min(100, gameState.reputation + 4);
+
+            showFloatingText(`+$${total} Tip!`);
+            createCustomerJoyParticles(seat.pathT);
+
+            carriage.sushi = null;
+            seat.customer = null;
+
+            renderCustomerOrdersStrip();
+            updateStatsUI();
+
+            setTimeout(() => spawnCustomerAtSeat(seat.id), 1800 + Math.random() * 2000);
+            checkShiftCompletionProgress();
+        }
+
+        function spawnCustomerAtSeat(seatId) {
+            const seat = seats.find(s => s.id === seatId);
+            if (!seat || seat.customer) return;
+
+            const unlockedRecipes = RECIPES.filter(r => r.unlocked);
+            const craving = unlockedRecipes[Math.floor(Math.random() * unlockedRecipes.length)];
+            const custType = CUSTOMER_AVATARS[Math.floor(Math.random() * CUSTOMER_AVATARS.length)];
+
+            seat.customer = {
+                id: 'cust_' + Math.random(),
+                name: custType.name,
+                avatar: custType.avatar,
+                craving: craving,
+                maxPatience: 45 * gameState.patienceMultiplier,
+                patience: 45 * gameState.patienceMultiplier
+            };
+            renderCustomerOrdersStrip();
+        }
+
+        function customerPatienceTimerLoop() {
+            let needsRender = false;
+            seats.forEach(seat => {
+                if (seat.customer) {
+                    seat.customer.patience -= 1;
+                    needsRender = true;
+                    if (seat.customer.patience <= 0) {
+                        playSound('fail');
+                        gameState.reputation = Math.max(0, gameState.reputation - 6);
+                        showNotification('A customer walked away angry! -6% Rep', 'rose');
+                        seat.customer = null;
+                        updateStatsUI();
+                        setTimeout(() => spawnCustomerAtSeat(seat.id), 2500);
+                    }
+                }
+            });
+            if (needsRender) renderCustomerOrdersStrip();
+        }
+
+        function createCustomerJoyParticles(pathT) {
+            const pt = getTrackPoint(pathT, canvas.width, canvas.height);
+            for (let i = 0; i < 9; i++) {
+                particles.push({
+                    x: pt.x, y: pt.y,
+                    vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3 - 2,
+                    text: ['❤️', '⭐', '✨', '🍣', '🍱'][Math.floor(Math.random() * 5)],
+                    life: 1.0
+                });
+            }
+        }
+
+        function updateAndDrawParticles(ctx) {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+                ctx.font = '14px sans-serif';
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.fillText(p.text, p.x, p.y);
+                ctx.globalAlpha = 1.0;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+        }
+
+        /* 6. ULTIMATE INTERACTIVE INGREDIENT MARKET & BAMBOO MAT */
+        function renderIngredientsMarket() {
+            const container = document.getElementById('ingredients-market-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            Object.values(INGREDIENTS).forEach(ing => {
+                const isOutOfStock = ing.stock <= 0;
+                const card = document.createElement('div');
+                card.className = `${ing.color} ${isOutOfStock ? 'opacity-40 grayscale' : 'hover:brightness-110 cursor-pointer'} p-2 rounded-xl border border-white/10 flex flex-col items-center justify-between transition transform active:scale-95 shadow relative`;
+                
+                if (!isOutOfStock) {
+                    card.onclick = () => addIngredientToBambooMat(ing.id);
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center justify-between w-full text-[10px] font-bold px-1">
+                        <span>${ing.icon}</span>
+                        <span class="bg-slate-950/70 px-1.5 py-0.2 rounded text-white">${ing.stock}/${ing.maxStock}</span>
+                    </div>
+                    <div class="text-[11px] font-bold text-center mt-1 truncate w-full">${ing.name}</div>
+                    ${isOutOfStock ? '<div class="absolute inset-0 bg-slate-950/80 rounded-xl flex items-center justify-center text-[10px] font-bold text-rose-400">EMPTY</div>' : ''}
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function restockAllPantry() {
+            if (gameState.money < 15) {
+                playSound('fail');
+                showNotification('Need $15 to restock pantry!', 'rose');
+                return;
+            }
+            playSound('buy');
+            gameState.money -= 15;
+            Object.values(INGREDIENTS).forEach(ing => {
+                ing.stock = ing.maxStock;
+            });
+            updateStatsUI();
+            renderIngredientsMarket();
+            showNotification('Pantry fully restocked! 🛒', 'emerald');
+        }
+
+        function addIngredientToBambooMat(ingId) {
+            const ing = INGREDIENTS[ingId];
+            if (!ing || ing.stock <= 0) {
+                playSound('fail');
+                showNotification('Ingredient out of stock! Restock pantry.', 'rose');
+                return;
+            }
+
+            playSound('chop');
+            ing.stock--;
+            gameState.bambooMat.push(ingId);
+            renderIngredientsMarket();
+            updateBambooMatUI();
+        }
+
+        function clearBambooMat() {
+            playSound('tap');
+            // Return stock back if cleared
+            gameState.bambooMat.forEach(ingId => {
+                if (INGREDIENTS[ingId]) INGREDIENTS[ingId].stock++;
+            });
+            gameState.bambooMat = [];
+            renderIngredientsMarket();
+            updateBambooMatUI();
+        }
+
+        function renderRecipeQuickSelect() {
+            const container = document.getElementById('quick-recipes-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            RECIPES.forEach(recipe => {
+                if (!recipe.unlocked) return;
+                const card = document.createElement('div');
+                card.className = 'bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 p-2 rounded-xl cursor-pointer transition flex items-center space-x-2 text-xs shadow';
+                card.onclick = () => autoFillRecipeToMat(recipe.id);
+
+                card.innerHTML = `
+                    <span class="text-xl">${recipe.icon}</span>
+                    <div class="flex-1 truncate">
+                        <div class="font-bold text-slate-200 truncate font-heading">${recipe.name}</div>
+                        <div class="text-emerald-400 font-semibold">$${recipe.price}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function autoFillRecipeToMat(recipeId) {
+            const recipe = RECIPES.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            // Check if all ingredients have enough stock
+            for (let ingId of recipe.ingredients) {
+                if (!INGREDIENTS[ingId] || INGREDIENTS[ingId].stock <= 0) {
+                    playSound('fail');
+                    showNotification(`Missing stock for ${INGREDIENTS[ingId] ? INGREDIENTS[ingId].name : ingId}!`, 'rose');
+                    return;
+                }
+            }
+
+            // Return current mat stock first
+            gameState.bambooMat.forEach(ingId => {
+                if (INGREDIENTS[ingId]) INGREDIENTS[ingId].stock++;
+            });
+
+            // Consume new stock
+            recipe.ingredients.forEach(ingId => {
+                INGREDIENTS[ingId].stock--;
+            });
+
+            playSound('chop');
+            gameState.bambooMat = [...recipe.ingredients];
+            renderIngredientsMarket();
+            updateBambooMatUI();
+        }
+
+        function updateBambooMatUI() {
+            const container = document.getElementById('mat-ingredients-list');
+            const rollBtn = document.getElementById('roll-load-btn');
+            const badge = document.getElementById('matched-recipe-badge');
+
+            if (gameState.bambooMat.length === 0) {
+                container.innerHTML = `<p class="text-xs text-amber-300/60 font-medium text-center">Tap ingredients below or pick from recipe book!</p>`;
+                rollBtn.disabled = true;
+                badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-800 text-slate-400';
+                badge.innerText = 'Assemble Ingredients';
+                return;
+            }
+
+            container.innerHTML = '';
+            gameState.bambooMat.forEach(ingId => {
+                const ing = INGREDIENTS[ingId];
+                if (ing) {
+                    const pill = document.createElement('div');
+                    pill.className = `${ing.color} px-2.5 py-1 rounded-xl border border-white/20 flex items-center space-x-1 shadow text-xs font-bold pop-in`;
+                    pill.innerHTML = `<span>${ing.icon}</span><span>${ing.name}</span>`;
+                    container.appendChild(pill);
+                }
+            });
+
+            // Check if matches any recipe
+            const matchedRecipe = RECIPES.find(r => {
+                if (r.ingredients.length !== gameState.bambooMat.length) return false;
+                const sortedMat = [...gameState.bambooMat].sort();
+                const sortedRec = [...r.ingredients].sort();
+                return sortedMat.every((val, idx) => val === sortedRec[idx]);
+            });
+
+            if (matchedRecipe) {
+                badge.className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+                badge.innerText = `✨ Matches: ${matchedRecipe.name}`;
+                rollBtn.disabled = false;
+            } else {
+                badge.className = 'text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-rose-500/20 text-rose-300 border border-rose-500/40';
+                badge.innerText = '⚠️ Custom Roll (Low Value)';
+                rollBtn.disabled = false;
+            }
+        }
+
+        function rollAndLoadDish() {
+            if (gameState.bambooMat.length === 0) return;
+
+            const matchedRecipe = RECIPES.find(r => {
+                if (r.ingredients.length !== gameState.bambooMat.length) return false;
+                const sortedMat = [...gameState.bambooMat].sort();
+                const sortedRec = [...r.ingredients].sort();
+                return sortedMat.every((val, idx) => val === sortedRec[idx]);
+            }) || {
+                id: 'custom_roll',
+                name: 'Chef Specialty Roll',
+                icon: '🍱',
+                price: 18
+            };
+
+            const emptyCarriage = gameState.carriages.find(c => c.sushi === null);
+            if (!emptyCarriage) {
+                playSound('fail');
+                showNotification('All train carriages are full! Wait for customers to pick plates.', 'amber');
+                return;
+            }
+
+            playSound('roll');
+            const matBox = document.getElementById('bamboo-mat-box');
+            matBox.classList.add('bamboo-action');
+            setTimeout(() => matBox.classList.remove('bamboo-action'), 350);
+
+            emptyCarriage.sushi = matchedRecipe;
+            gameState.bambooMat = [];
+            updateBambooMatUI();
+            showNotification(`Loaded ${matchedRecipe.name} onto Train!`, 'emerald');
+            playSound('serve');
+        }
+
+        /* 7. SHOP & UPGRADES */
+        function openShopModal() {
+            playSound('tap');
+            renderShopTabContent();
+            document.getElementById('shop-modal').classList.remove('hidden');
+        }
+
+        function closeShopModal() {
+            playSound('tap');
+            document.getElementById('shop-modal').classList.add('hidden');
+            updateStatsUI();
+        }
+
+        function switchShopTab(tab) {
+            playSound('tap');
+            gameState.activeShopTab = tab;
+            ['upgrades', 'skins', 'recipes'].forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                if (t === tab) btn.className = 'flex-1 py-3 text-amber-400 border-b-2 border-amber-400 font-bold';
+                else btn.className = 'flex-1 py-3 text-slate-400 hover:text-white font-bold';
+            });
+            renderShopTabContent();
+        }
+
+        function renderShopTabContent() {
+            const container = document.getElementById('shop-content-area');
+            container.innerHTML = '';
+
+            if (gameState.activeShopTab === 'upgrades') {
+                const upgrades = [
+                    { id: 'speed', name: 'Bullet Speed Boost (+25% Train Speed)', cost: 110, action: () => gameState.trainSpeed += 0.25 },
+                    { id: 'carriage', name: 'Add Extra Train Carriage', cost: 150, action: () => { gameState.carriageCount++; initTrainCarriages(); } },
+                    { id: 'tip', name: 'Gourmet Gold Plates (+40% Tips)', cost: 190, action: () => gameState.tipMultiplier += 0.4 }
+                ];
+                upgrades.forEach(item => {
+                    const canAfford = gameState.money >= item.cost;
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between';
+                    card.innerHTML = `
+                        <div>
+                            <div class="font-bold text-white text-xs sm:text-sm font-heading">${item.name}</div>
+                            <div class="text-emerald-400 font-bold text-xs mt-0.5">$${item.cost}</div>
+                        </div>
+                        <button onclick="buyUpgrade('${item.id}', ${item.cost})" ${!canAfford ? 'disabled' : ''} class="${canAfford ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed'} px-3.5 py-1.5 rounded-xl text-xs font-bold transition">Upgrade</button>
+                    `;
+                    container.appendChild(card);
+                });
+            } else if (gameState.activeShopTab === 'skins') {
+                TRAIN_SKINS.forEach(skin => {
+                    const isSelected = gameState.activeSkinId === skin.id;
+                    const canAfford = gameState.money >= skin.cost;
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between';
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg font-bold shadow" style="background-color: ${skin.engineColor}">🚅</div>
+                            <div>
+                                <div class="font-bold text-white text-xs sm:text-sm font-heading">${skin.name}</div>
+                                <div class="text-slate-400 text-[11px]">${skin.unlocked ? 'Unlocked' : '$' + skin.cost}</div>
+                            </div>
+                        </div>
+                        <button onclick="selectOrBuySkin('${skin.id}')" class="${isSelected ? 'bg-emerald-600 text-white font-bold' : skin.unlocked ? 'bg-slate-800 text-slate-200' : canAfford ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-slate-800 text-slate-500 cursor-not-allowed'} px-3 py-1.5 rounded-xl text-xs font-bold transition">
+                            ${isSelected ? 'Active' : skin.unlocked ? 'Select' : 'Unlock'}
+                        </button>
+                    `;
+                    container.appendChild(card);
+                });
+            } else if (gameState.activeShopTab === 'recipes') {
+                RECIPES.forEach(recipe => {
+                    if (recipe.unlocked) return;
+                    const cost = recipe.price * 5;
+                    const canAfford = gameState.money >= cost;
+                    const card = document.createElement('div');
+                    card.className = 'bg-slate-950 border border-slate-800 p-3.5 rounded-2xl flex items-center justify-between';
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">${recipe.icon}</span>
+                            <div>
+                                <div class="font-bold text-white text-xs sm:text-sm font-heading">${recipe.name}</div>
+                                <div class="text-emerald-400 font-bold text-xs">$${cost}</div>
+                            </div>
+                        </div>
+                        <button onclick="unlockRecipe('${recipe.id}', ${cost})" ${!canAfford ? 'disabled' : ''} class="${canAfford ? 'bg-purple-600 text-white shadow-lg' : 'bg-slate-800 text-slate-500 cursor-not-allowed'} px-3.5 py-1.5 rounded-xl text-xs font-bold transition">Unlock</button>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        function buyUpgrade(type, cost) {
+            if (gameState.money < cost) return;
+            playSound('buy');
+            gameState.money -= cost;
+            if (type === 'speed') gameState.trainSpeed += 0.25;
+            else if (type === 'carriage') { gameState.carriageCount++; initTrainCarriages(); }
+            else if (type === 'tip') gameState.tipMultiplier += 0.4;
+            updateStatsUI();
+            renderShopTabContent();
+            showNotification('Upgrade acquired!', 'emerald');
+        }
+
+        function selectOrBuySkin(skinId) {
+            const skin = TRAIN_SKINS.find(s => s.id === skinId);
+            if (!skin) return;
+            if (skin.unlocked) {
+                playSound('tap');
+                gameState.activeSkinId = skin.id;
+                document.getElementById('skin-name-hud').innerText = skin.name;
+                renderShopTabContent();
+            } else if (gameState.money >= skin.cost) {
+                playSound('buy');
+                gameState.money -= skin.cost;
+                skin.unlocked = true;
+                gameState.activeSkinId = skin.id;
+                document.getElementById('skin-name-hud').innerText = skin.name;
+                updateStatsUI();
+                renderShopTabContent();
+                showNotification(`Unlocked ${skin.name}!`, 'emerald');
+            }
+        }
+
+        function unlockRecipe(recipeId, cost) {
+            const recipe = RECIPES.find(r => r.id === recipeId);
+            if (!recipe || gameState.money < cost) return;
+            playSound('buy');
+            gameState.money -= cost;
+            recipe.unlocked = true;
+            renderRecipeQuickSelect();
+            updateStatsUI();
+            renderShopTabContent();
+            showNotification(`Unlocked ${recipe.name}!`, 'emerald');
+        }
+
+        function updateStatsUI() {
+            document.getElementById('hud-level').innerText = gameState.level;
+            document.getElementById('hud-money').innerText = gameState.money;
+            document.getElementById('hud-reputation').innerText = gameState.reputation;
+            document.getElementById('hud-served').innerText = gameState.dishesServed;
+            document.getElementById('hud-target').innerText = gameState.level * 8;
+            document.getElementById('shop-user-funds').innerText = gameState.money;
+            document.getElementById('hud-speed-val').innerText = `${Math.round(gameState.trainSpeed * 100)}%`;
+            document.getElementById('hud-carts-val').innerText = gameState.carriages.length;
+        }
+
+        function checkShiftCompletionProgress() {
+            const target = gameState.level * 8;
+            if (gameState.dishesServed >= target) {
+                openSummaryModal();
+            }
+        }
+
+        function showFloatingText(text) {
+            const floatEl = document.createElement('div');
+            floatEl.className = 'fixed top-1/2 left-1/2 text-emerald-400 font-heading font-bold text-2xl sm:text-3xl z-50 pointer-events-none float-up-fade';
+            floatEl.innerText = text;
+            document.body.appendChild(floatEl);
+            setTimeout(() => floatEl.remove(), 1200);
+        }
+
+        function showNotification(text, color) {
+            const notif = document.createElement('div');
+            const colorClass = color === 'emerald' ? 'bg-emerald-600 border-emerald-400' : color === 'rose' ? 'bg-rose-600 border-rose-400' : 'bg-amber-600 border-amber-400';
+            notif.className = `fixed top-14 left-1/2 transform -translate-x-1/2 ${colorClass} text-white px-4 py-1.5 rounded-2xl shadow-2xl font-bold text-xs z-50 border pop-in`;
+            notif.innerHTML = text;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 1800);
+        }
+
+        function openSummaryModal() {
+            document.getElementById('summary-dishes-val').innerText = gameState.dishesServed;
+            document.getElementById('summary-money-val').innerText = `$${gameState.money}`;
+            document.getElementById('summary-reputation-val').innerText = `${gameState.reputation}%`;
+            document.getElementById('summary-modal').classList.remove('hidden');
+        }
+
+        function advanceNextLevel() {
+            playSound('tap');
+            document.getElementById('summary-modal').classList.add('hidden');
+            gameState.level++;
+            gameState.dishesServed = 0;
+            gameState.reputation = Math.min(100, gameState.reputation + 15);
+            initTrainCarriages();
+            updateStatsUI();
+        }
+
+        window.onload = function() {
+            initGame();
+        };
+    </script>
+</body>
+</html>
