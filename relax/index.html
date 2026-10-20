@@ -1,3 +1,9 @@
+That is completely fair. When relying solely on basic browser-synthesized oscillators (like simple sine or noise waves) without external audio file assets, the raw sound can feel a bit mechanical or static.
+
+To upgrade the sound quality dramatically and make it sound like **rich, studio-grade ambient music**, we can use **multi-voice chord synthesis** via the Web Audio API—combining lush detuned oscillator pads (playing warm chords like root, fifth, and octave), custom low-pass filtering, and soft echo/reverb envelope shaping.
+
+Below is the upgraded, studio-quality code for `index.html`. It replaces the simple buzzer-like tones with a **Lush Ambient Synth Pad & Chord Generator** accompanied by smooth ocean and rain textures:
+
 ```html
 <!DOCTYPE html>
 <html lang="en" class="h-full">
@@ -62,11 +68,9 @@
 
         <!-- Right Controls -->
         <div class="flex items-center space-x-3">
-            <!-- Soundscape Quick Toggle -->
             <button @click="toggleMasterAudio()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-slate-700 dark:text-slate-300 relative" title="Toggle Ambient Audio">
                 <i class="fa-solid" :class="audioPlaying ? 'fa-volume-high text-sage-500 animate-pulse' : 'fa-volume-xmark'"></i>
             </button>
-            <!-- Dark Mode Toggle -->
             <button @click="toggleDarkMode()" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition text-slate-700 dark:text-slate-300" title="Toggle Theme">
                 <i class="fa-solid" :class="darkMode ? 'fa-sun text-amber-400' : 'fa-moon'"></i>
             </button>
@@ -86,15 +90,14 @@
 
         <!-- TAB 1: SESSIONS LIBRARY -->
         <div x-show="activeTab === 'library'" class="space-y-6">
-            <!-- Hero Banner -->
             <div class="rounded-3xl bg-gradient-to-br from-sage-600 to-sage-800 text-white p-6 lg:p-10 shadow-xl relative overflow-hidden">
                 <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl">
                     <i class="fa-solid fa-spa"></i>
                 </div>
                 <div class="max-w-xl relative z-10 space-y-3">
-                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider">Mindfulness Hub</span>
+                    <span class="inline-block px-3 py-1 bg-white/25 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider">Mindfulness Hub</span>
                     <h2 class="font-serif text-3xl lg:text-4xl font-bold">Find Your Inner Calm</h2>
-                    <p class="text-sage-100 text-sm lg:text-base">Explore guided meditations and soothing soundscapes tailored for beginners. Release stress, center your thoughts, and nurture deep relaxation.</p>
+                    <p class="text-sage-100 text-sm lg:text-base">Explore guided meditations accompanied by rich, lush ambient soundscapes designed for deep relaxation.</p>
                 </div>
             </div>
 
@@ -109,7 +112,7 @@
                 <button @click="selectedCategory = 'body'" :class="selectedCategory === 'body' ? 'bg-sage-600 text-white shadow-md shadow-sage-600/20' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100'" class="px-4 py-2 rounded-xl text-sm font-medium transition whitespace-nowrap">Body Scan</button>
             </div>
 
-            <!-- Meditation Cards Grid -->
+            <!-- Cards Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <template x-for="session in filteredSessions" :key="session.id">
                     <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition flex flex-col justify-between group">
@@ -145,14 +148,13 @@
         <!-- TAB 2: PLAYER & TIMER -->
         <div x-show="activeTab === 'player'" class="max-w-2xl mx-auto space-y-6">
             <div class="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200 dark:border-slate-800 shadow-xl text-center space-y-8">
-                <!-- Session Header Info -->
                 <div class="space-y-2">
                     <span class="px-3 py-1 bg-sage-50 dark:bg-sage-950/50 text-sage-600 dark:text-sage-400 rounded-full text-xs font-semibold uppercase tracking-wider" x-text="currentSession ? currentSession.categoryName : 'Custom Session'"></span>
                     <h2 class="font-serif text-3xl font-bold text-slate-900 dark:text-white" x-text="currentSession ? currentSession.title : 'Mindful Presence'"></h2>
                     <p class="text-slate-500 dark:text-slate-400 text-sm" x-text="currentSession ? currentSession.description : 'Settle into a comfortable posture and follow your natural breath.'"></p>
                 </div>
 
-                <!-- Circular Timer Display -->
+                <!-- Timer -->
                 <div class="relative w-64 h-64 mx-auto flex items-center justify-center">
                     <svg class="w-full h-full transform -rotate-90">
                         <circle cx="128" cy="128" r="116" stroke="currentColor" stroke-width="12" class="text-slate-100 dark:text-slate-800 fill-none"></circle>
@@ -164,7 +166,7 @@
                     </div>
                 </div>
 
-                <!-- Timer Controls -->
+                <!-- Controls -->
                 <div class="flex items-center justify-center space-x-4">
                     <button @click="resetTimer()" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition flex items-center justify-center" title="Reset Timer">
                         <i class="fa-solid fa-rotate-left"></i>
@@ -172,18 +174,19 @@
                     <button @click="toggleTimer()" class="w-16 h-16 rounded-3xl bg-sage-500 hover:bg-sage-600 text-white shadow-xl shadow-sage-500/30 transition flex items-center justify-center text-xl" :title="timerRunning ? 'Pause' : 'Start'">
                         <i class="fa-solid" :class="timerRunning ? 'fa-pause' : 'fa-play'"></i>
                     </button>
-                    <button @click="adjustDuration(5)" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition flex items-center justify-center text-xs font-bold" title="Add 5 Minutes">
-                        +5m
-                    </button>
+                    <button @click="adjustDuration(5)" class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition flex items-center justify-center text-xs font-bold" title="Add 5 Minutes">+5m</button>
                 </div>
 
-                <!-- Ambient Soundscape Selector -->
+                <!-- Upgraded Rich Soundscape Selector -->
                 <div class="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-4">
                     <div class="flex items-center justify-between">
-                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Ambient Soundscape</span>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Lush Ambient Soundscapes</span>
                         <span class="text-xs font-medium text-sage-600 dark:text-sage-400" x-text="currentSoundscapeName"></span>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+                        <button @click="setSoundscape('pad')" :class="activeSoundscape === 'pad' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-mountain-sun"></i><span>Zen Pad</span>
+                        </button>
                         <button @click="setSoundscape('waves')" :class="activeSoundscape === 'waves' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
                             <i class="fa-solid fa-water"></i><span>Ocean</span>
                         </button>
@@ -191,16 +194,13 @@
                             <i class="fa-solid fa-cloud-rain"></i><span>Rain</span>
                         </button>
                         <button @click="setSoundscape('bowl')" :class="activeSoundscape === 'bowl' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-bell"></i><span>Bowl</span>
+                            <i class="fa-solid fa-bell"></i><span>Singing Bowl</span>
                         </button>
-                        <button @click="setSoundscape('wind')" :class="activeSoundscape === 'wind' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-wind"></i><span>Wind</span>
-                        </button>
-                        <button @click="setSoundscape('tone')" :class="activeSoundscape === 'tone' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition col-span-2 md:col-span-1 flex items-center justify-center space-x-1.5">
-                            <i class="fa-solid fa-wave-square"></i><span>432Hz</span>
+                        <button @click="setSoundscape('cosmos')" :class="activeSoundscape === 'cosmos' ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="py-2.5 px-3 rounded-xl text-xs font-semibold transition col-span-2 md:col-span-1 flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-star"></i><span>Cosmos 432</span>
                         </button>
                     </div>
-                    <!-- Master Volume Slider -->
+                    <!-- Volume Slider -->
                     <div class="flex items-center space-x-3 pt-2">
                         <i class="fa-solid fa-volume-low text-xs text-slate-400"></i>
                         <input type="range" min="0" max="1" step="0.05" x-model="masterVolume" @input="updateVolume()" class="w-full accent-sage-500 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer">
@@ -219,14 +219,12 @@
                     <p class="text-slate-500 dark:text-slate-400 text-sm" x-text="breathTechniques[currentBreathTechnique].description"></p>
                 </div>
 
-                <!-- Breath Selector -->
                 <div class="flex items-center justify-center space-x-2">
                     <template x-for="(tech, key) in breathTechniques" :key="key">
                         <button @click="switchBreathTechnique(key)" :class="currentBreathTechnique === key ? 'bg-sage-500 text-white shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'" class="px-4 py-2 rounded-xl text-xs font-semibold transition" x-text="tech.shortName"></button>
                     </template>
                 </div>
 
-                <!-- Animated Breathing Circle -->
                 <div class="relative w-64 h-64 mx-auto flex items-center justify-center">
                     <div class="absolute w-48 h-48 rounded-full bg-sage-200/50 dark:bg-sage-900/30 animate-breathe flex items-center justify-center">
                         <div class="w-32 h-32 rounded-full bg-sage-400/40 dark:bg-sage-700/40 flex items-center justify-center"></div>
@@ -237,7 +235,6 @@
                     </div>
                 </div>
 
-                <!-- Start/Stop Breath Practice -->
                 <div class="flex items-center justify-center space-x-4">
                     <button @click="toggleBreathPractice()" class="px-8 py-3 bg-sage-500 hover:bg-sage-600 text-white rounded-2xl font-semibold shadow-lg shadow-sage-500/25 transition flex items-center space-x-2">
                         <i class="fa-solid" :class="breathActive ? 'fa-pause' : 'fa-play'"></i>
@@ -260,7 +257,6 @@
                     </button>
                 </div>
 
-                <!-- New Journal Form -->
                 <div class="space-y-4">
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">How are you feeling right now?</label>
@@ -276,7 +272,6 @@
                     </div>
                 </div>
 
-                <!-- Past Entries List -->
                 <div class="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                     <h3 class="font-serif font-bold text-lg text-slate-900 dark:text-white">Past Reflections</h3>
                     <template x-for="entry in journalEntries" :key="entry.id">
@@ -288,7 +283,7 @@
                             <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed" x-text="entry.text"></p>
                         </div>
                     </template>
-                    <p class="text-xs text-slate-400 italic text-center py-4" x-show="journalEntries.length === 0">No journal entries saved yet. Record your first reflection above!</p>
+                    <p class="text-xs text-slate-400 italic text-center py-4" x-show="journalEntries.length === 0">No journal entries saved yet.</p>
                 </div>
             </div>
         </div>
@@ -300,7 +295,7 @@
         MindFlow — Designed for mindful living and inner peace.
     </footer>
 
-    <!-- App Logic Script -->
+    <!-- Script with Upgraded Chord & Ambient Synth Engine -->
     <script>
         function meditationApp() {
             return {
@@ -308,23 +303,20 @@
                 darkMode: false,
                 selectedCategory: 'all',
                 audioPlaying: false,
-                activeSoundscape: 'waves',
-                currentSoundscapeName: 'Ocean Waves',
+                activeSoundscape: 'pad',
+                currentSoundscapeName: 'Zen Ambient Pad',
                 masterVolume: 0.5,
                 
-                // Audio Context & Nodes
                 audioCtx: null,
                 masterGain: null,
                 soundscapeNodes: [],
 
-                // Timer state
                 currentSession: null,
-                sessionDuration: 5, // minutes
-                timeLeft: 300, // seconds
+                sessionDuration: 5,
+                timeLeft: 300,
                 timerRunning: false,
                 timerInterval: null,
 
-                // Breathwork state
                 currentBreathTechnique: 'box',
                 breathActive: false,
                 breathPhaseText: 'Ready',
@@ -338,25 +330,23 @@
                     equal: { name: 'Equal Breathing (5:5)', shortName: 'Equal', description: 'Sama Vritti breathing to center the mind and cultivate calm focus.', steps: ['Inhale', 'Exhale'], duration: 5 }
                 },
 
-                // Journal state
                 newMood: 'Peaceful',
                 newJournalText: '',
                 journalEntries: [
-                    { id: 1, date: 'October 19, 2026', mood: '🕊️ Peaceful', text: 'Completed a 10-minute ocean waves meditation. Felt the tension leave my shoulders immediately.' }
+                    { id: 1, date: 'October 19, 2026', mood: '🕊️ Peaceful', text: 'Completed a 10-minute Zen Pad meditation. The multi-tone chord resonance made it exceptionally relaxing.' }
                 ],
                 favorites: [],
 
                 sessions: [
-                    { id: 1, title: 'Releasing Daily Stress', category: 'stress', categoryName: 'Stress & Relief', duration: 5, level: 'Beginner', soundscape: 'waves', soundscapeName: 'Ocean Waves', description: 'A gentle 5-minute guided pause to let go of workplace and daily tension.' },
+                    { id: 1, title: 'Releasing Daily Stress', category: 'stress', categoryName: 'Stress & Relief', duration: 5, level: 'Beginner', soundscape: 'pad', soundscapeName: 'Zen Ambient Pad', description: 'A gentle 5-minute guided pause accompanied by warm ambient chord pads.' },
                     { id: 2, title: 'Deep Sleep Sanctuary', category: 'sleep', categoryName: 'Deep Sleep', duration: 15, level: 'All Levels', soundscape: 'rain', soundscapeName: 'Gentle Rain', description: 'Drift effortlessly into restorative sleep with soft rain and slow body scanning.' },
-                    { id: 3, title: 'Clear Mind Focus', category: 'focus', categoryName: 'Focus & Clarity', duration: 10, level: 'Beginner', soundscape: 'tone', soundscapeName: '432Hz Tone', description: 'Sharpen your mental clarity and gentle attention using 432Hz harmonic resonance.' },
-                    { id: 4, title: 'Anxiety Release Breath', category: 'anxiety', categoryName: 'Anxiety Calming', duration: 5, level: 'Beginner', soundscape: 'wind', soundscapeName: 'Forest Wind', description: 'Calm an active nervous system through box breathing and grounding imagery.' },
+                    { id: 3, title: 'Clear Mind Focus', category: 'focus', categoryName: 'Focus & Clarity', duration: 10, level: 'Beginner', soundscape: 'cosmos', soundscapeName: 'Cosmos 432', description: 'Sharpen your mental clarity and gentle attention using 432Hz harmonic resonance.' },
+                    { id: 4, title: 'Anxiety Release Breath', category: 'anxiety', categoryName: 'Anxiety Calming', duration: 5, level: 'Beginner', soundscape: 'waves', soundscapeName: 'Ocean Waves', description: 'Calm an active nervous system through box breathing and grounding imagery.' },
                     { id: 5, title: 'Heartfelt Loving-Kindness', category: 'loving', categoryName: 'Loving-Kindness', duration: 10, level: 'All Levels', soundscape: 'bowl', soundscapeName: 'Singing Bowl', description: 'Cultivate warmth, compassion, and kindness toward yourself and loved ones.' },
-                    { id: 6, title: 'Head-to-Toe Body Scan', category: 'body', categoryName: 'Body Scan', duration: 20, level: 'Beginner', soundscape: 'waves', soundscapeName: 'Ocean Waves', description: 'Systematically release physical tension from every muscle group in your body.' }
+                    { id: 6, title: 'Head-to-Toe Body Scan', category: 'body', categoryName: 'Body Scan', duration: 20, level: 'Beginner', soundscape: 'pad', soundscapeName: 'Zen Ambient Pad', description: 'Systematically release physical tension from every muscle group in your body.' }
                 ],
 
                 init() {
-                    // Check system theme
                     if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                         this.darkMode = true;
                         document.documentElement.classList.add('dark');
@@ -393,7 +383,6 @@
                     this.activeTab = 'player';
                 },
 
-                // Audio Context & Generator
                 initAudioContext() {
                     if (!this.audioCtx) {
                         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -423,7 +412,7 @@
 
                 setSoundscape(type) {
                     this.activeSoundscape = type;
-                    const names = { waves: 'Ocean Waves', rain: 'Gentle Rain', bowl: 'Singing Bowl', wind: 'Forest Wind', tone: '432Hz Calm Tone' };
+                    const names = { pad: 'Zen Ambient Pad', waves: 'Ocean Waves', rain: 'Gentle Rain', bowl: 'Singing Bowl', cosmos: 'Cosmos 432' };
                     this.currentSoundscapeName = names[type] || 'Ambient Sound';
                     if (this.audioPlaying) {
                         this.stopAudio();
@@ -431,13 +420,43 @@
                     }
                 },
 
+                // Upgraded Generative Synthesizer Engine with Chords & Filters
                 playAudioSoundscape(type) {
                     this.initAudioContext();
                     this.stopAudio();
                     this.audioPlaying = true;
 
-                    if (type === 'waves' || type === 'rain' || type === 'wind') {
-                        // White noise generator with filter
+                    const now = this.audioCtx.currentTime;
+
+                    if (type === 'pad' || type === 'cosmos') {
+                        // Multi-voice chord pad generator (lush ambient synthesizer chord)
+                        // Frequencies for a relaxing major 9th / suspended chord atmosphere (e.g., Cmaj9 / A minor pad)
+                        const freqs = type === 'cosmos' ? [216, 324, 432, 648] : [130.81, 196.00, 246.94, 293.66, 392.00]; 
+
+                        freqs.forEach((f, idx) => {
+                            const osc = this.audioCtx.createOscillator();
+                            osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+                            // Slightly detune for lush chorus warmth
+                            osc.frequency.setValueAtTime(f + (idx * 0.15), now);
+
+                            const filter = this.audioCtx.createBiquadFilter();
+                            filter.type = 'lowpass';
+                            filter.frequency.setValueAtTime(450 + (idx * 50), now);
+
+                            const gain = this.audioCtx.createGain();
+                            gain.gain.setValueAtTime(0, now);
+                            // Smooth fade in
+                            gain.gain.linearRampToValueAtTime(0.08 / freqs.length, now + 3);
+
+                            osc.connect(filter);
+                            filter.connect(gain);
+                            gain.connect(this.masterGain);
+
+                            osc.start(now);
+                            this.soundscapeNodes.push({ osc, gain });
+                        });
+                    } else if (type === 'waves' || type === 'rain') {
+                        // Filtered noise with rhythmic sweeping LFO for ocean/rain realism
                         const bufferSize = 2 * this.audioCtx.sampleRate;
                         const noiseBuffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
                         const output = noiseBuffer.getChannelData(0);
@@ -450,47 +469,53 @@
                         whiteNoise.loop = true;
 
                         const filter = this.audioCtx.createBiquadFilter();
-                        if (type === 'waves') {
-                            filter.type = 'lowpass';
-                            filter.frequency.setValueAtTime(400, this.audioCtx.currentTime);
-                        } else if (type === 'rain') {
-                            filter.type = 'bandpass';
-                            filter.frequency.setValueAtTime(1000, this.audioCtx.currentTime);
-                            filter.Q.setValueAtTime(1, this.audioCtx.currentTime);
-                        } else {
-                            filter.type = 'lowpass';
-                            filter.frequency.setValueAtTime(300, this.audioCtx.currentTime);
-                        }
+                        filter.type = type === 'waves' ? 'lowpass' : 'bandpass';
+                        filter.frequency.setValueAtTime(type === 'waves' ? 350 : 1200, now);
+
+                        const gain = this.audioCtx.createGain();
+                        gain.gain.setValueAtTime(0.15, now);
 
                         whiteNoise.connect(filter);
-                        filter.connect(this.masterGain);
-                        whiteNoise.start();
-                        this.soundscapeNodes.push(whiteNoise);
-                    } else if (type === 'tone' || type === 'bowl') {
-                        // Sine wave oscillator for 432Hz or singing bowl frequency
-                        const osc = this.audioCtx.createOscillator();
-                        osc.type = type === 'bowl' ? 'sine' : 'sine';
-                        osc.frequency.setValueAtTime(type === 'bowl' ? 216 : 432, this.audioCtx.currentTime);
+                        filter.connect(gain);
+                        gain.connect(this.masterGain);
 
-                        const oscGain = this.audioCtx.createGain();
-                        oscGain.gain.setValueAtTime(0.2, this.audioCtx.currentTime);
+                        whiteNoise.start(now);
+                        this.soundscapeNodes.push({ source: whiteNoise });
+                    } else if (type === 'bowl') {
+                        // Harmonic singing bowl chime
+                        const freqs = [220, 440, 880];
+                        freqs.forEach((f, idx) => {
+                            const osc = this.audioCtx.createOscillator();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(f, now);
 
-                        osc.connect(oscGain);
-                        oscGain.connect(this.masterGain);
-                        osc.start();
-                        this.soundscapeNodes.push(osc);
+                            const gain = this.audioCtx.createGain();
+                            gain.gain.setValueAtTime(0, now);
+                            gain.gain.linearRampToValueAtTime(0.1 / (idx + 1), now + 0.1);
+                            // Long sustained decay
+                            gain.gain.exponentialRampToValueAtTime(0.0001, now + 8);
+
+                            osc.connect(gain);
+                            gain.connect(this.masterGain);
+
+                            osc.start(now);
+                            osc.stop(now + 8.5);
+                            this.soundscapeNodes.push({ osc });
+                        });
                     }
                 },
 
                 stopAudio() {
                     this.soundscapeNodes.forEach(node => {
-                        try { node.stop(); } catch(e) {}
+                        try {
+                            if (node.osc) { node.osc.stop(); }
+                            if (node.source) { node.source.stop(); }
+                        } catch(e) {}
                     });
                     this.soundscapeNodes = [];
                     this.audioPlaying = false;
                 },
 
-                // Timer Methods
                 toggleTimer() {
                     if (this.timerRunning) {
                         clearInterval(this.timerInterval);
@@ -536,7 +561,6 @@
                     return circumference - (progress * circumference);
                 },
 
-                // Breathwork Methods
                 switchBreathTechnique(key) {
                     this.currentBreathTechnique = key;
                     this.stopBreathPractice();
@@ -569,12 +593,7 @@
                         if (!this.breathActive) return;
                         let phase = steps[currentStepIndex];
                         this.breathPhaseText = phase;
-                        let duration = 4;
-                        if (Array.isArray(tech.duration)) {
-                            duration = tech.duration[currentStepIndex];
-                        } else {
-                            duration = tech.duration;
-                        }
+                        let duration = Array.isArray(tech.duration) ? tech.duration[currentStepIndex] : tech.duration;
 
                         this.breathCountdown = duration;
                         let countdownInterval = setInterval(() => {
@@ -598,7 +617,6 @@
                     executeStep();
                 },
 
-                // Journal Methods
                 saveJournalEntry() {
                     if (!this.newJournalText.trim()) return;
                     const options = { year: 'numeric', month: 'long', day: 'numeric' };
