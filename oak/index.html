@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>The Harvest Under the Oak - Interactive Storybook</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Canvas Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            autumnOrange: '#c2410c',
+            autumnGold: '#d97706',
+            forestGreen: '#14532d',
+            cozyBark: '#451a03'
+          },
+          fontFamily: {
+            fredoka: ['Fredoka', 'sans-serif'],
+            quicksand: ['Quicksand', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Quicksand', sans-serif;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #0c0a09;
+    }
+
+    h1, h2, h3, .font-title {
+      font-family: 'Fredoka', cursive;
+    }
+
+    .glow-gold {
+      filter: drop-shadow(0 0 12px rgba(217, 119, 6, 0.6));
+    }
+
+    .highlight-word {
+      background-color: rgba(217, 119, 6, 0.4);
+      color: #fef08a;
+      border-radius: 4px;
+      padding: 0 4px;
+      transition: all 0.2s ease;
+      box-shadow: 0 0 8px rgba(217, 119, 6, 0.5);
+    }
+
+    .cozy-overlay {
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(217, 119, 6, 0.12) 0%, rgba(15, 23, 42, 0.3) 100%);
+      mix-blend-mode: color-burn;
+    }
+
+    @keyframes floatParticle {
+      0% { transform: translateY(0px) rotate(0deg); opacity: 0.2; }
+      50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+      100% { transform: translateY(0px) rotate(360deg); opacity: 0.2; }
+    }
+
+    .particle {
+      animation: floatParticle 6s infinite ease-in-out;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+  </style>
+</head>
+<body class="text-stone-100 min-h-screen flex flex-col justify-between overflow-x-hidden selection:bg-amber-500 selection:text-stone-900">
+
+  <div id="cozyOverlay" class="fixed inset-0 cozy-overlay z-40 transition-opacity duration-500 opacity-100"></div>
+  <div id="particleContainer" class="fixed inset-0 pointer-events-none z-0 overflow-hidden"></div>
+
+  <!-- HEADER -->
+  <header class="relative z-30 bg-stone-900/90 backdrop-blur-md border-b border-stone-800 px-4 py-3 flex items-center justify-between shadow-lg">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-700 to-amber-500 flex items-center justify-center text-stone-950 font-bold text-xl shadow-md glow-gold">
+        <i class="fa-solid fa-tree text-amber-100"></i>
+      </div>
+      <div>
+        <h1 class="text-base sm:text-lg font-bold text-amber-300 leading-tight">The Harvest Under the Oak</h1>
+        <p class="text-xs text-stone-400 hidden sm:block">A Story of Whispering Woods</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 sm:gap-3">
+      <button id="btnCozyMode" onclick="toggleCozyMode()" class="p-2.5 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition text-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-sun"></i>
+        <span class="text-xs font-semibold hidden md:inline">Cozy Tone</span>
+      </button>
+
+      <button onclick="toggleSettingsModal()" class="p-2.5 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-sm transition">
+        <i class="fa-solid fa-sliders"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN DISPLAY -->
+  <main class="relative z-10 flex-1 flex flex-col items-center justify-center p-3 sm:p-6 max-w-6xl w-full mx-auto my-auto">
+    <div class="w-full bg-stone-900/90 rounded-3xl border border-stone-800 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col lg:flex-row min-h-[540px] lg:h-[620px] relative transition-all duration-300">
+      
+      <!-- Canvas Container -->
+      <div class="lg:w-7/12 bg-stone-950 relative flex items-center justify-center overflow-hidden border-b lg:border-b-0 lg:border-r border-stone-800 p-2 min-h-[280px] sm:min-h-[350px]">
+        
+        <div class="absolute top-3 left-3 z-20 bg-stone-900/80 backdrop-blur-md border border-amber-500/30 px-3 py-1.5 rounded-full text-xs text-amber-300 flex items-center gap-2 shadow-lg animate-pulse">
+          <i class="fa-solid fa-hand-pointer text-amber-400"></i>
+          <span id="interactiveHintText">Tap the scene to interact!</span>
+        </div>
+
+        <button id="btnAmbientFx" onclick="playCurrentPageAmbient()" class="absolute top-3 right-3 z-20 bg-stone-900/80 hover:bg-stone-800 backdrop-blur-md border border-stone-700 px-3 py-1.5 rounded-full text-xs text-stone-300 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-volume-high text-amber-400"></i>
+          <span class="hidden sm:inline">Play Sound</span>
+        </button>
+
+        <canvas id="storyCanvas" class="w-full h-full max-h-[380px] object-contain cursor-pointer rounded-2xl"></canvas>
+      </div>
+
+      <!-- Story Content Column -->
+      <div class="lg:w-5/12 p-5 sm:p-8 flex flex-col justify-between bg-stone-900/50 backdrop-blur-md relative">
+        
+        <div class="flex items-center justify-between border-b border-stone-800 pb-3 mb-3">
+          <span id="pageIndicator" class="text-xs font-bold tracking-widest text-amber-400 uppercase bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full">
+            Page 1 of 11
+          </span>
+
+          <button id="btnReadToMeMode" onclick="toggleReadMode()" class="text-xs px-2.5 py-1 rounded-lg bg-stone-800 border border-stone-700 text-stone-300 hover:text-amber-300 transition flex items-center gap-1.5">
+            <i id="readModeIcon" class="fa-solid fa-volume-check text-amber-400"></i>
+            <span id="readModeLabel">Read to Me</span>
+          </button>
+        </div>
+
+        <!-- Text Block -->
+        <div id="storyTextBlock" class="flex-1 my-auto overflow-y-auto max-h-[220px] lg:max-h-[320px] pr-2 leading-relaxed"></div>
+
+        <!-- Prompt Box -->
+        <div id="readAloudPrompt" class="mt-4 p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3">
+          <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl mt-0.5">
+            <i class="fa-solid fa-comments text-base"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-amber-300 uppercase tracking-wide">Read-Aloud Fun</h4>
+            <p id="promptText" class="text-xs text-amber-100/90 mt-0.5"></p>
+          </div>
+        </div>
+
+        <!-- Narration Controls -->
+        <div class="mt-5 pt-3 border-t border-stone-800 flex items-center justify-between gap-3">
+          <button id="btnNarrate" onclick="toggleNarration()" class="flex-1 py-3 px-4 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 transition active:scale-95">
+            <i id="narrateIcon" class="fa-solid fa-circle-play text-base"></i>
+            <span id="narrateBtnText">Listen to Page</span>
+          </button>
+
+          <button id="btnReplay" onclick="playCurrentPageAmbient()" class="p-3 rounded-2xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-300 transition" title="Replay Sound Effects">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER NAVIGATION -->
+  <footer class="relative z-30 bg-stone-900/90 border-t border-stone-800 px-4 py-3 sm:px-8">
+    <div class="max-w-6xl mx-auto flex flex-col gap-2">
+      <div class="w-full bg-stone-800 rounded-full h-2 overflow-hidden flex cursor-pointer" onclick="handleProgressBarClick(event)">
+        <div id="progressBar" class="bg-gradient-to-r from-amber-500 to-amber-300 h-full transition-all duration-300 rounded-full" style="width: 9%;"></div>
+      </div>
+
+      <div class="flex items-center justify-between pt-1">
+        <button id="btnPrev" onclick="prevPage()" class="py-2.5 px-4 sm:px-6 rounded-2xl bg-stone-800 hover:bg-stone-700 border border-stone-700 text-stone-200 font-bold text-xs sm:text-sm flex items-center gap-2 transition disabled:opacity-40 disabled:cursor-not-allowed">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>Previous</span>
+        </button>
+
+        <div id="pageDots" class="flex items-center gap-1.5 sm:gap-2"></div>
+
+        <button id="btnNext" onclick="nextPage()" class="py-2.5 px-4 sm:px-6 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-md shadow-amber-500/10 transition active:scale-95">
+          <span>Next</span>
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- SETTINGS MODAL -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-stone-950/80 backdrop-blur-md flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+    <div class="bg-stone-900 border border-stone-800 rounded-3xl p-6 max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300">
+      <div class="flex items-center justify-between border-b border-stone-800 pb-4 mb-4">
+        <h3 class="text-lg font-bold text-amber-300 flex items-center gap-2">
+          <i class="fa-solid fa-sliders"></i> Story Settings
+        </h3>
+        <button onclick="toggleSettingsModal()" class="text-stone-400 hover:text-stone-100 text-lg p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-5">
+        <div>
+          <label class="text-xs font-semibold text-stone-400 uppercase tracking-wider block mb-2">Text Size</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="setTextSize('standard')" class="py-2 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-300 text-xs font-bold">Standard</button>
+            <button onclick="setTextSize('large')" class="py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-300 hover:bg-stone-700 text-sm font-bold">Large</button>
+            <button onclick="setTextSize('xlarge')" class="py-2 rounded-xl bg-stone-800 border border-stone-700 text-stone-300 hover:bg-stone-700 text-base font-bold">XL</button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between p-3 bg-stone-800/60 rounded-2xl border border-stone-800">
+          <div>
+            <div class="text-sm font-bold text-stone-200">Auto Turn Page</div>
+            <div class="text-xs text-stone-400">Turn page when narration ends</div>
+          </div>
+          <input type="checkbox" id="toggleAutoAdvance" onchange="toggleAutoAdvanceSetting()" class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
+        </div>
+
+        <button onclick="resetBookProgress()" class="w-full py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition">
+          <i class="fa-solid fa-rotate-left mr-1"></i> Restart Story
+        </button>
+      </div>
+
+      <button onclick="toggleSettingsModal()" class="w-full mt-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-sm shadow-md transition">Done</button>
+    </div>
+  </div>
+
+  <!-- REWARD MODAL -->
+  <div id="rewardModal" class="fixed inset-0 z-50 bg-stone-950/90 backdrop-blur-lg flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-500">
+    <div class="bg-gradient-to-b from-stone-900 to-stone-950 border-2 border-amber-500/50 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform scale-90 transition-transform duration-500">
+      <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-200 flex items-center justify-center text-stone-950 text-5xl shadow-xl shadow-amber-500/30 glow-gold animate-bounce">
+        <i class="fa-solid fa-wheat-awn"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-amber-300 font-title">Wonderful Harvest!</h2>
+      <p class="text-sm text-stone-300 mt-2 leading-relaxed">
+        You finished reading <br/><span class="font-bold text-amber-400">The Harvest Under the Oak</span>!
+      </p>
+      <div class="my-6 p-4 bg-amber-500/10 rounded-2xl border border-amber-500/30 text-xs text-amber-200">
+        🍁 Bramble, Pip, and Rowan are warm and cozy under the ancient oak tree!
+      </div>
+      <button onclick="replayFromBeginning()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-sm shadow-lg transition">Read Again</button>
+    </div>
+  </div>
+
+  <script>
+    const STORY_PAGES = [
+      {
+        pageNumber: 1,
+        title: "The Harvest Under the Oak",
+        text: "The Harvest Under the Oak",
+        prompt: "Welcome to Whispering Woods! Tap the title to begin our story.",
+        hint: "Tap the screen to hear a gentle forest breeze!",
+        interactiveType: "breeze"
+      },
+      {
+        pageNumber: 2,
+        title: "Autumn in Whispering Woods",
+        text: "Autumn had arrived in Whispering Woods, bringing crisp morning air and golden leaves. Bramble the rabbit hopped across the chilly grass, looking for sweet clover before the frost settled in.",
+        prompt: "Can you hop your fingers across your knee like Bramble the rabbit?",
+        hint: "Tap Bramble to make her hop across the chilly grass!",
+        interactiveType: "hop"
+      },
+      {
+        pageNumber: 3,
+        title: "Pip's Discovery",
+        text: "Nearby, Pip the field mouse was struggling. She had discovered the largest, most delicious golden acorn in the whole forest, but it was far too heavy for one small mouse to carry home.",
+        prompt: "Say 'Squeak, squeak!' like Pip trying to lift the giant acorn!",
+        hint: "Tap the giant golden acorn to see Pip try to push it!",
+        interactiveType: "squeak"
+      },
+      {
+        pageNumber: 4,
+        title: "Working Together",
+        text: "\"Let me help you!\" called Bramble, bounding over. Together, the rabbit and the mouse nudged the giant acorn, rolling it merrily down the smooth grassy hill.",
+        prompt: "Can you make rolling circles with your hands?",
+        hint: "Tap the acorn to roll it down the grassy hill!",
+        interactiveType: "roll"
+      },
+      {
+        pageNumber: 5,
+        title: "The Stuck Acorn",
+        text: "But the acorn rolled too fast! It bounced over a patch of moss and fell deep into a dark gap beneath the tangled roots of an ancient oak tree, completely out of reach.",
+        prompt: "Oh no! Make a surprised gasp with Pip and Bramble!",
+        hint: "Tap the oak tree roots to inspect the dark gap!",
+        interactiveType: "gasp"
+      },
+      {
+        pageNumber: 6,
+        title: "Rowan Steps In",
+        text: "Pip gasped, and Bramble tried to reach down with her paws, but the heavy roots were locked tight. Just then, a quiet crunch of twigs echoed through the forest. Rowan the young buck stepped gracefully into the clearing.",
+        prompt: "Gently tread your feet on the floor: crunch, crunch, crunch!",
+        hint: "Tap Rowan the deer to watch him enter the clearing!",
+        interactiveType: "crunch"
+      },
+      {
+        pageNumber: 7,
+        title: "A Helpful Lift",
+        text: "\"What seems to be the trouble?\" Rowan asked softly. Seeing the stuck acorn, he carefully dipped his head and wedged his sturdy antlers under the heavy wooden root.",
+        prompt: "Can you place your hands above your head like deer antlers?",
+        hint: "Tap Rowan's sturdy antlers to help lift the root!",
+        interactiveType: "lift"
+      },
+      {
+        pageNumber: 8,
+        title: "Rescued!",
+        text: "With a gentle lift of his neck, Rowan raised the root just enough. Bramble reached in quickly and tugged the prized acorn back out into the open light.",
+        prompt: "Cheer out loud: 'Hoo-ray for team work!'",
+        hint: "Tap Bramble to tug the giant acorn back out!",
+        interactiveType: "cheer"
+      },
+      {
+        pageNumber: 9,
+        title: "Sharing the Feast",
+        text: "\"Hooray!\" squeaked Pip. The friends cheered. Pip and Bramble carefully cracked open the shell and shared the sweet acorn bits right on the spot.",
+        prompt: "Pretend to munch on sweet acorn bits: crunch, crunch!",
+        hint: "Tap the cracked acorn to share the sweet treats!",
+        interactiveType: "munch"
+      },
+      {
+        pageNumber: 10,
+        title: "Kind Friends",
+        text: "Rowan leaned down, happily accepting a sweet piece held out by Pip. The chilly autumn breeze didn't feel so cold anymore with good food and kind friends nearby.",
+        prompt: "Give yourself or a friend a warm cozy hug!",
+        hint: "Tap Pip giving Rowan a sweet piece of acorn!",
+        interactiveType: "hug"
+      },
+      {
+        pageNumber: 11,
+        title: "Cozy Home",
+        text: "As the first snowflakes began to drift quietly through the starry evening sky, Bramble, Rowan, and Pip snuggled close under the shelter of the old oak tree, warm and content in their cozy forest home.",
+        prompt: "Whisper: 'Goodnight friends, stay warm and cozy!'",
+        hint: "Tap the starry sky to watch the soft snowflakes drift down!",
+        interactiveType: "snow"
+      }
+    ];
+
+    /* APP STATE */
+    let currentPageIndex = 0;
+    let isNarrating = false;
+    let isReadToMe = true;
+    let autoAdvance = false;
+    let cozyMode = true;
+    let currentSpeechUtterance = null;
+    let textSize = 'standard';
+
+    let canvas, ctx;
+    let canvasTime = 0;
+    let leavesList = [];
+    let snowflakesList = [];
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    window.onload = function() {
+      canvas = document.getElementById('storyCanvas');
+      ctx = canvas.getContext('2d');
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      canvas.addEventListener('click', handleCanvasClick);
+
+      renderPageDots();
+      loadPage(currentPageIndex);
+      setupSwipeGestures();
+      spawnBackgroundParticles();
+
+      animateCanvas();
+    };
+
+    function resizeCanvas() {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * (window.devicePixelRatio || 1);
+      canvas.height = rect.height * (window.devicePixelRatio || 1);
+    }
+
+    function animateCanvas() {
+      canvasTime += 0.03;
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Scene Switcher for 11 pages
+      switch(currentPageIndex) {
+        case 0: drawCoverScene(w, h); break;
+        case 1: drawScene1(w, h); break;
+        case 2: drawScene2(w, h); break;
+        case 3: drawScene3(w, h); break;
+        case 4: drawScene4(w, h); break;
+        case 5: drawScene5(w, h); break;
+        case 6: drawScene6(w, h); break;
+        case 7: drawScene7(w, h); break;
+        case 8: drawScene8(w, h); break;
+        case 9: drawScene9(w, h); break;
+        case 10: drawScene10(w, h); break;
+      }
+
+      requestAnimationFrame(animateCanvas);
+    }
+
+    // COVER SCENE
+    function drawCoverScene(w, h) {
+      // Golden Autumn Sky
+      const skyGradient = ctx.createLinearGradient(0, 0, 0, h);
+      skyGradient.addColorStop(0, '#78350f');
+      skyGradient.addColorStop(1, '#1c1917');
+      ctx.fillStyle = skyGradient;
+      ctx.fillRect(0, 0, w, h);
+
+      // Ancient Oak Tree
+      drawAncientOak(w * 0.5, h * 0.85, w * 0.45);
+
+      // Title Banner
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 26px Fredoka';
+      ctx.textAlign = 'center';
+      ctx.fillText("The Harvest Under the Oak", w * 0.5, h * 0.25);
+
+      // Friends
+      drawBrambleRabbit(w * 0.35, h * 0.72, 22);
+      drawPipMouse(w * 0.5, h * 0.75, 12);
+      drawRowanBuck(w * 0.68, h * 0.62, 32);
+    }
+
+    // PAGE 1: Autumn in Whispering Woods
+    function drawScene1(w, h) {
+      drawForestBackground(w, h, '#9a3412');
+
+      // Autumn Leaves Falling
+      drawFallingLeaves(w, h, '#d97706');
+
+      // Bramble Hopping
+      const hopY = h * 0.7 - Math.abs(Math.sin(canvasTime * 3)) * 18;
+      drawBrambleRabbit(w * 0.45, hopY, 26);
+    }
+
+    // PAGE 2: Pip's Discovery
+    function drawScene2(w, h) {
+      drawForestBackground(w, h, '#78350f');
+
+      // Pip Mouse pushing Giant Acorn
+      drawPipMouse(w * 0.32, h * 0.73, 14);
+      drawGiantAcorn(w * 0.52, h * 0.68, 38);
+    }
+
+    // PAGE 3: Working Together
+    function drawScene3(w, h) {
+      drawForestBackground(w, h, '#78350f');
+
+      // Grassy Hill
+      ctx.fillStyle = '#15803d';
+      ctx.beginPath();
+      ctx.moveTo(0, h * 0.65);
+      ctx.quadraticCurveTo(w * 0.5, h * 0.85, w, h * 0.75);
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.fill();
+
+      // Acorn Rolling
+      const rollX = w * 0.4 + Math.sin(canvasTime) * 15;
+      drawGiantAcorn(rollX, h * 0.7, 36, canvasTime);
+
+      // Bramble and Pip Pushing
+      drawBrambleRabbit(rollX - 45, h * 0.68, 22);
+      drawPipMouse(rollX - 25, h * 0.72, 12);
+    }
+
+    // PAGE 4: The Stuck Acorn
+    function drawScene4(w, h) {
+      drawForestBackground(w, h, '#451a03');
+
+      // Ancient Oak Roots Gap
+      drawOakRootsWithGap(w * 0.5, h * 0.75, w * 0.6);
+
+      // Acorn stuck in dark gap
+      drawGiantAcorn(w * 0.5, h * 0.78, 30);
+
+      // Bramble and Pip worried
+      drawBrambleRabbit(w * 0.28, h * 0.72, 22);
+      drawPipMouse(w * 0.38, h * 0.75, 12);
+    }
+
+    // PAGE 5: Rowan Steps In
+    function drawScene5(w, h) {
+      drawForestBackground(w, h, '#451a03');
+
+      // Oak Roots with stuck acorn
+      drawOakRootsWithGap(w * 0.35, h * 0.75, w * 0.5);
+      drawGiantAcorn(w * 0.35, h * 0.78, 28);
+
+      // Friends
+      drawBrambleRabbit(w * 0.18, h * 0.73, 20);
+      drawPipMouse(w * 0.25, h * 0.75, 11);
+
+      // Rowan entering gracefully
+      drawRowanBuck(w * 0.72, h * 0.58, 38);
+    }
+
+    // PAGE 6: A Helpful Lift
+    function drawScene6(w, h) {
+      drawForestBackground(w, h, '#451a03');
+
+      // Oak Root Lifted
+      drawOakRootsWithGap(w * 0.4, h * 0.72, w * 0.5, true);
+      drawGiantAcorn(w * 0.4, h * 0.76, 28);
+
+      // Rowan bowing head with antlers under root
+      drawRowanBuck(w * 0.58, h * 0.62, 36, true);
+
+      // Bramble reaching
+      drawBrambleRabbit(w * 0.22, h * 0.73, 20);
+    }
+
+    // PAGE 7: Rescued!
+    function drawScene7(w, h) {
+      drawForestBackground(w, h, '#78350f');
+
+      // Giant Acorn Tugged Out in light
+      drawGiantAcorn(w * 0.45, h * 0.68, 34);
+
+      // Bramble and Pip cheering
+      drawBrambleRabbit(w * 0.32, h * 0.68, 24);
+      drawPipMouse(w * 0.58, h * 0.72, 13);
+      drawRowanBuck(w * 0.78, h * 0.58, 36);
+    }
+
+    // PAGE 8: Sharing the Feast
+    function drawScene8(w, h) {
+      drawForestBackground(w, h, '#78350f');
+
+      // Cracked Acorn Shell
+      drawCrackedAcorn(w * 0.5, h * 0.72, 34);
+
+      // Friends sharing bits
+      drawBrambleRabbit(w * 0.32, h * 0.70, 22);
+      drawPipMouse(w * 0.5, h * 0.74, 12);
+      drawRowanBuck(w * 0.72, h * 0.60, 34);
+    }
+
+    // PAGE 9: Kind Friends
+    function drawScene9(w, h) {
+      drawForestBackground(w, h, '#78350f');
+
+      // Rowan accepting sweet acorn piece from Pip
+      drawRowanBuck(w * 0.6, h * 0.6, 38, true);
+      drawPipMouse(w * 0.42, h * 0.68, 13);
+      drawBrambleRabbit(w * 0.25, h * 0.70, 22);
+    }
+
+    // PAGE 10: Cozy Home
+    function drawScene10(w, h) {
+      // Starry Night Sky
+      const nightSky = ctx.createLinearGradient(0, 0, 0, h);
+      nightSky.addColorStop(0, '#0f172a');
+      nightSky.addColorStop(1, '#1c1917');
+      ctx.fillStyle = nightSky;
+      ctx.fillRect(0, 0, w, h);
+
+      // Snowflakes drifting
+      drawSnowflakes(w, h);
+
+      // Big Oak Tree Shelter
+      drawAncientOak(w * 0.5, h * 0.85, w * 0.5);
+
+      // Snuggled Friends
+      drawRowanBuck(w * 0.5, h * 0.62, 36);
+      drawBrambleRabbit(w * 0.38, h * 0.72, 22);
+      drawPipMouse(w * 0.44, h * 0.75, 12);
+    }
+
+    /* ILLUSTRATION PRIMITIVES */
+    function drawForestBackground(w, h, foliageColor) {
+      // Sky
+      const sky = ctx.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, foliageColor);
+      sky.addColorStop(1, '#1c1917');
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, w, h);
+
+      // Ground
+      ctx.fillStyle = '#27272a';
+      ctx.fillRect(0, h * 0.75, w, h * 0.25);
+    }
+
+    function drawAncientOak(x, y, r) {
+      // Trunk
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(x - r * 0.2, y - r * 0.6, r * 0.4, r * 0.8);
+
+      // Foliage Canopy
+      ctx.fillStyle = '#14532d';
+      ctx.beginPath();
+      ctx.arc(x, y - r * 0.7, r * 0.5, 0, Math.PI * 2);
+      ctx.arc(x - r * 0.3, y - r * 0.5, r * 0.4, 0, Math.PI * 2);
+      ctx.arc(x + r * 0.3, y - r * 0.5, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawOakRootsWithGap(x, y, size, lifted = false) {
+      ctx.fillStyle = '#292524';
+      ctx.fillRect(x - size * 0.5, y, size, 40);
+
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 14;
+      ctx.beginPath();
+      ctx.moveTo(x - size * 0.4, y + 20);
+      ctx.lineTo(x - size * 0.1, y + (lifted ? -15 : 5));
+      ctx.moveTo(x + size * 0.4, y + 20);
+      ctx.lineTo(x + size * 0.1, y + 5);
+      ctx.stroke();
+    }
+
+    function drawGiantAcorn(x, y, r, rot = 0) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+
+      // Nut Body
+      ctx.fillStyle = '#d97706';
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.2, r * 0.7, r, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Cap
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(0, -r * 0.4, r * 0.75, Math.PI, 0, false);
+      ctx.fill();
+
+      // Stem
+      ctx.fillRect(-3, -r * 0.8, 6, r * 0.4);
+      ctx.restore();
+    }
+
+    function drawCrackedAcorn(x, y, r) {
+      drawGiantAcorn(x, y, r);
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y - 5);
+      ctx.lineTo(x + 5, y + 10);
+      ctx.lineTo(x - 2, y + 20);
+      ctx.stroke();
+    }
+
+    function drawBrambleRabbit(x, y, r) {
+      // Body
+      ctx.fillStyle = '#d4d4d8';
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 0.8, r, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Ears
+      ctx.beginPath();
+      ctx.ellipse(x - r * 0.3, y - r * 1.2, r * 0.2, r * 0.6, -0.2, 0, Math.PI * 2);
+      ctx.ellipse(x + r * 0.3, y - r * 1.2, r * 0.2, r * 0.6, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.arc(x + r * 0.3, y - r * 0.3, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawPipMouse(x, y, r) {
+      // Body
+      ctx.fillStyle = '#a1a1aa';
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 0.9, r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Round Ear
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.arc(x - r * 0.4, y - r * 0.4, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = '#18181b';
+      ctx.beginPath();
+      ctx.arc(x + r * 0.4, y - r * 0.2, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawRowanBuck(x, y, r, bowed = false) {
+      const headY = bowed ? y + r * 0.4 : y - r * 0.5;
+
+      // Body
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 1.2, r * 0.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.beginPath();
+      ctx.ellipse(x - r * 0.8, headY, r * 0.4, r * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Antlers
+      ctx.strokeStyle = '#fef3c7';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x - r * 0.8, headY - r * 0.2);
+      ctx.lineTo(x - r * 1.1, headY - r * 0.8);
+      ctx.lineTo(x - r * 1.3, headY - r * 0.7);
+      ctx.stroke();
+    }
+
+    function drawFallingLeaves(w, h, color) {
+      if (leavesList.length === 0) {
+        for (let i = 0; i < 12; i++) {
+          leavesList.push({ x: Math.random() * w, y: Math.random() * h, size: 8 + Math.random() * 8 });
+        }
+      }
+      leavesList.forEach(l => {
+        l.y += 0.8;
+        if (l.y > h) l.y = 0;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(l.x, l.y, l.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function drawSnowflakes(w, h) {
+      if (snowflakesList.length === 0) {
+        for (let i = 0; i < 20; i++) {
+          snowflakesList.push({ x: Math.random() * w, y: Math.random() * h, r: 1.5 + Math.random() * 2 });
+        }
+      }
+      snowflakesList.forEach(s => {
+        s.y += 0.5;
+        if (s.y > h) s.y = 0;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    function playSound(type) {
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        if (type === 'hop') {
+          osc.frequency.setValueAtTime(300, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.15);
+        } else if (type === 'squeak') {
+          osc.frequency.setValueAtTime(800, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        } else {
+          osc.frequency.setValueAtTime(220, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(330, ctx.currentTime + 0.25);
+        }
+
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch(e) {}
+    }
+
+    function handleCanvasClick() {
+      playCurrentPageAmbient();
+    }
+
+    function toggleNarration() {
+      if (isNarrating) stopNarration(); else startNarration();
+    }
+
+    function startNarration() {
+      if (!('speechSynthesis' in window)) return;
+      window.speechSynthesis.cancel();
+      const pageData = STORY_PAGES[currentPageIndex];
+
+      currentSpeechUtterance = new SpeechSynthesisUtterance(pageData.text);
+      currentSpeechUtterance.rate = 0.85;
+
+      currentSpeechUtterance.onboundary = (event) => {
+        if (event.name === 'word') highlightWordAtIndex(event.charIndex);
+      };
+
+      currentSpeechUtterance.onstart = () => {
+        isNarrating = true;
+        updateNarrateButtonUI(true);
+      };
+
+      currentSpeechUtterance.onend = () => {
+        isNarrating = false;
+        updateNarrateButtonUI(false);
+        clearWordHighlights();
+        if (autoAdvance && currentPageIndex < STORY_PAGES.length - 1) {
+          setTimeout(() => { nextPage(); }, 1500);
+        }
+      };
+
+      window.speechSynthesis.speak(currentSpeechUtterance);
+    }
+
+    function stopNarration() {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      isNarrating = false;
+      updateNarrateButtonUI(false);
+      clearWordHighlights();
+    }
+
+    function updateNarrateButtonUI(playing) {
+      document.getElementById('narrateBtnText').textContent = playing ? "Pause Narration" : "Listen to Page";
+      document.getElementById('narrateIcon').className = playing ? "fa-solid fa-circle-pause text-base" : "fa-solid fa-circle-play text-base";
+    }
+
+    function loadPage(index) {
+      stopNarration();
+      currentPageIndex = index;
+
+      const page = STORY_PAGES[index];
+      document.getElementById('pageIndicator').textContent = `Page ${page.pageNumber} of ${STORY_PAGES.length}`;
+      document.getElementById('interactiveHintText').textContent = page.hint;
+      document.getElementById('promptText').textContent = page.prompt;
+
+      renderFormattedStoryText(page.text);
+      updateNavigationControls();
+
+      if (isReadToMe) {
+        setTimeout(() => {
+          startNarration();
+          playCurrentPageAmbient();
+        }, 400);
+      }
+    }
+
+    function renderFormattedStoryText(text) {
+      const block = document.getElementById('storyTextBlock');
+      const words = text.split(" ");
+      let charAccumulator = 0;
+
+      const html = words.map((word) => {
+        const span = `<span id="word-${charAccumulator}" class="story-word inline-block transition-colors duration-150">${word}</span>`;
+        charAccumulator += word.length + 1;
+        return span;
+      }).join(" ");
+
+      block.innerHTML = `<p class="leading-relaxed font-medium transition-all ${getFontSizeClass()}">${html}</p>`;
+    }
+
+    function highlightWordAtIndex(charIndex) {
+      clearWordHighlights();
+      document.querySelectorAll('.story-word').forEach(span => {
+        const idOffset = parseInt(span.id.replace('word-', ''));
+        if (Math.abs(idOffset - charIndex) < 4) {
+          span.classList.add('highlight-word');
+        }
+      });
+    }
+
+    function clearWordHighlights() {
+      document.querySelectorAll('.highlight-word').forEach(el => el.classList.remove('highlight-word'));
+    }
+
+    function updateNavigationControls() {
+      const pct = ((currentPageIndex + 1) / STORY_PAGES.length) * 100;
+      document.getElementById('progressBar').style.width = `${pct}%`;
+      document.getElementById('btnPrev').disabled = (currentPageIndex === 0);
+
+      const btnNext = document.getElementById('btnNext');
+      btnNext.innerHTML = (currentPageIndex === STORY_PAGES.length - 1)
+        ? `<span>Finish Story</span> <i class="fa-solid fa-trophy"></i>`
+        : `<span>Next</span> <i class="fa-solid fa-arrow-right"></i>`;
+      
+      renderPageDots();
+    }
+
+    function renderPageDots() {
+      const dotsContainer = document.getElementById('pageDots');
+      dotsContainer.innerHTML = '';
+      STORY_PAGES.forEach((_, idx) => {
+        const dot = document.createElement('button');
+        dot.className = `w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full transition-all ${
+          idx === currentPageIndex ? 'bg-amber-400 w-5 sm:w-6 glow-gold' : 'bg-stone-700 hover:bg-stone-500'
+        }`;
+        dot.onclick = () => loadPage(idx);
+        dotsContainer.appendChild(dot);
+      });
+    }
+
+    function nextPage() {
+      if (currentPageIndex < STORY_PAGES.length - 1) loadPage(currentPageIndex + 1);
+      else showCompletionReward();
+    }
+
+    function prevPage() {
+      if (currentPageIndex > 0) loadPage(currentPageIndex - 1);
+    }
+
+    function handleProgressBarClick(e) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      loadPage(Math.min(Math.floor(ratio * STORY_PAGES.length), STORY_PAGES.length - 1));
+    }
+
+    function playCurrentPageAmbient() {
+      playSound(STORY_PAGES[currentPageIndex].interactiveType);
+    }
+
+    function toggleCozyMode() {
+      cozyMode = !cozyMode;
+      document.getElementById('cozyOverlay').style.opacity = cozyMode ? '1' : '0';
+    }
+
+    function toggleReadMode() {
+      isReadToMe = !isReadToMe;
+      document.getElementById('readModeLabel').textContent = isReadToMe ? "Read to Me" : "Read Alone";
+      if (isReadToMe) startNarration(); else stopNarration();
+    }
+
+    function setTextSize(size) {
+      textSize = size;
+      renderFormattedStoryText(STORY_PAGES[currentPageIndex].text);
+    }
+
+    function getFontSizeClass() {
+      if (textSize === 'large') return 'text-lg sm:text-xl';
+      if (textSize === 'xlarge') return 'text-xl sm:text-2xl';
+      return 'text-base sm:text-lg';
+    }
+
+    function toggleAutoAdvanceSetting() {
+      autoAdvance = document.getElementById('toggleAutoAdvance').checked;
+    }
+
+    function toggleSettingsModal() {
+      const modal = document.getElementById('settingsModal');
+      modal.classList.toggle('opacity-0');
+      modal.classList.toggle('pointer-events-none');
+    }
+
+    function setupSwipeGestures() {
+      let startX = 0;
+      document.querySelector('main').addEventListener('touchstart', (e) => startX = e.changedTouches[0].screenX, { passive: true });
+      document.querySelector('main').addEventListener('touchend', (e) => {
+        const diff = e.changedTouches[0].screenX - startX;
+        if (diff < -60) nextPage();
+        if (diff > 60) prevPage();
+      }, { passive: true });
+    }
+
+    function spawnBackgroundParticles() {
+      const container = document.getElementById('particleContainer');
+      for (let i = 0; i < 12; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle absolute rounded-full bg-amber-400/20 pointer-events-none';
+        p.style.width = p.style.height = `${Math.random() * 6 + 2}px`;
+        p.style.left = `${Math.random() * 100}%`;
+        p.style.top = `${Math.random() * 100}%`;
+        container.appendChild(p);
+      }
+    }
+
+    function showCompletionReward() {
+      playSound('hop');
+      const modal = document.getElementById('rewardModal');
+      modal.classList.remove('opacity-0', 'pointer-events-none');
+      if (typeof confetti === 'function') {
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+      }
+    }
+
+    function replayFromBeginning() {
+      document.getElementById('rewardModal').classList.add('opacity-0', 'pointer-events-none');
+      loadPage(0);
+    }
+
+    function resetBookProgress() {
+      toggleSettingsModal();
+      loadPage(0);
+    }
+  </script>
+</body>
+</html>
