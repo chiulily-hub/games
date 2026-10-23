@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Balloon Pop Arcade - Target 100</title>
+    <!-- Tailwind CSS for UI controls and overlays -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for crisp icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Fredoka', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            overflow: hidden;
+            background: #0f172a; /* Dark Slate / Charcoal */
+            cursor: none; /* Custom star cursor drawn on canvas */
+        }
+        /* Pulse & Glow animations */
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.6)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.9)); }
+        }
+        .animate-glow {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        /* Neon Glassmorphism Panel */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center m-0 p-0 overflow-hidden relative selection:bg-none">
+
+    <!-- Canvas Background & Game Area -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+    <!-- Top Navigation / HUD Stats Bar -->
+    <div id="hud" class="absolute top-4 left-4 right-4 md:left-8 md:right-8 z-10 flex justify-between items-center pointer-events-none">
+        
+        <!-- Score & Target Progress -->
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-4 pointer-events-auto border border-cyan-500/30">
+            <div class="flex flex-col">
+                <span class="text-xs uppercase tracking-wider font-bold text-cyan-400">Target: 100 Pts</span>
+                <div class="flex items-baseline gap-1">
+                    <span id="scoreText" class="text-2xl md:text-4xl font-extrabold text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">0</span>
+                    <span class="text-sm font-bold text-slate-400">/ 100</span>
+                </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-24 md:w-44 bg-slate-800/80 h-4 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                <div id="progressBar" class="h-full bg-gradient-to-r from-amber-400 via-pink-500 to-cyan-400 rounded-full transition-all duration-300 w-0"></div>
+            </div>
+        </div>
+
+        <!-- Timer & Stats -->
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-6 pointer-events-auto border border-pink-500/30">
+            <div class="text-center">
+                <span class="text-xs uppercase tracking-wider font-bold text-slate-400 block">Time</span>
+                <span id="timerText" class="text-xl md:text-2xl font-bold text-cyan-300">0.0s</span>
+            </div>
+            <div class="text-center hidden sm:block">
+                <span class="text-xs uppercase tracking-wider font-bold text-slate-400 block">Accuracy</span>
+                <span id="accuracyText" class="text-xl md:text-2xl font-bold text-emerald-400">100%</span>
+            </div>
+            
+            <!-- Controls (Pause/Sound) -->
+            <div class="flex items-center gap-2 border-l border-slate-700/60 pl-4">
+                <button id="soundBtn" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-cyan-400 flex items-center justify-center transition border border-slate-600 active:scale-95" title="Toggle Sound">
+                    <i id="soundIcon" class="fas fa-volume-up text-lg"></i>
+                </button>
+                <button id="pauseBtn" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-amber-400 flex items-center justify-center transition border border-slate-600 active:scale-95" title="Pause Game">
+                    <i id="pauseIcon" class="fas fa-pause text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Start Overlay Screen -->
+    <div id="startScreen" class="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/80 backdrop-blur-md transition-opacity duration-300">
+        <div class="bg-slate-900 border-2 border-cyan-500/40 rounded-3xl p-6 md:p-10 max-w-md w-11/12 text-center shadow-[0_0_50px_rgba(6,182,212,0.25)] relative overflow-hidden transform transition-all">
+            
+            <div class="text-5xl mb-3 flex justify-center gap-3">
+                <span class="animate-bounce" style="animation-delay: 0s;">🎈</span>
+                <span class="animate-bounce" style="animation-delay: 0.1s;">⭐</span>
+                <span class="animate-bounce" style="animation-delay: 0.2s;">🎈</span>
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-pink-500 to-amber-400 mb-2">
+                Neon Balloon Shooter
+            </h1>
+            <p class="text-slate-300 text-sm md:text-base font-medium mb-6">Pop balloons as they float up in a relaxed rhythm to reach <span class="text-amber-400 font-bold">100 Points</span>!</p>
+
+            <!-- Balloon Legend Table -->
+            <div class="grid grid-cols-2 gap-2 text-xs md:text-sm font-bold text-slate-200 bg-slate-800/60 p-4 rounded-2xl mb-6 border border-slate-700">
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-pink-500/30">
+                    <div class="w-7 h-9 bg-pink-500 rounded-full flex items-center justify-center text-white text-[11px] font-black">1</div>
+                    <span>Standard (+1)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-cyan-500/30">
+                    <div class="w-6 h-8 bg-cyan-500 rounded-full flex items-center justify-center text-slate-950 text-[11px] font-black">2</div>
+                    <span>Medium (+2)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-purple-500/30">
+                    <div class="w-6 h-7 bg-purple-500 rounded-full flex items-center justify-center text-amber-300 text-[10px] font-black">5★</div>
+                    <span>Star (+5)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-amber-500/30">
+                    <div class="w-5 h-6 bg-amber-400 rounded-full flex items-center justify-center text-slate-900 text-[10px] font-black">10</div>
+                    <span>Jackpot (+10)</span>
+                </div>
+            </div>
+
+            <button id="startGameBtn" class="w-full py-4 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-extrabold text-xl rounded-2xl shadow-[0_0_20px_rgba(20,184,166,0.5)] transform transition active:scale-95 flex items-center justify-center gap-3">
+                <i class="fas fa-crosshairs text-lg"></i> START SHOOTING
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pauseScreen" class="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="bg-slate-900 rounded-3xl p-8 max-w-sm w-11/12 text-center shadow-2xl border-2 border-amber-500/40">
+            <h2 class="text-3xl font-bold text-amber-400 mb-2"><i class="fas fa-pause-circle mr-2"></i>Game Paused</h2>
+            <p class="text-slate-400 text-sm mb-6">Take your time. Your targets are waiting!</p>
+            <button id="resumeBtn" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-lg rounded-xl shadow-lg transition mb-3">
+                Resume Game
+            </button>
+            <button id="restartPauseBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-lg rounded-xl transition border border-slate-700">
+                Restart Game
+            </button>
+        </div>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen" class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="bg-slate-900 border-2 border-amber-400/60 rounded-3xl p-6 md:p-8 max-w-md w-11/12 text-center shadow-[0_0_60px_rgba(251,191,36,0.3)] relative animate-glow">
+            <!-- Trophy Badge -->
+            <div class="w-20 h-20 mx-auto -mt-12 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full flex items-center justify-center border-4 border-slate-900 shadow-xl text-4xl text-slate-950 mb-2">
+                🏆
+            </div>
+
+            <h2 class="text-3xl font-extrabold text-slate-100 mb-1">TARGET REACHED!</h2>
+            <p class="text-sm text-cyan-400 font-semibold mb-6">100 Points Accomplished!</p>
+
+            <!-- Final Stats Grid -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Total Time</span>
+                    <span id="finalTime" class="text-2xl font-black text-amber-400">0.0s</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Accuracy</span>
+                    <span id="finalAccuracy" class="text-2xl font-black text-emerald-400">0%</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Balloons Popped</span>
+                    <span id="finalPopped" class="text-2xl font-black text-cyan-400">0</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Total Shots</span>
+                    <span id="finalShots" class="text-2xl font-black text-pink-400">0</span>
+                </div>
+            </div>
+
+            <button id="playAgainBtn" class="w-full py-4 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:from-amber-300 hover:to-pink-400 text-slate-950 font-extrabold text-xl rounded-2xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2">
+                <i class="fas fa-redo"></i> PLAY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Web Audio API Synthesizer ---
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playPop(score = 1) {
+                if (!this.enabled) return;
+                this.init();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                let baseFreq = 350 + (score * 100);
+                if (score === 10) baseFreq = 1100;
+
+                osc.type = score >= 5 ? 'triangle' : 'sine';
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.2, now + 0.09);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.09);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.09);
+            }
+
+            playMiss() {
+                if (!this.enabled) return;
+                this.init();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(160, now);
+                osc.frequency.exponentialRampToValueAtTime(70, now + 0.1);
+
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+
+            playVictory() {
+                if (!this.enabled) return;
+                this.init();
+
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + (idx * 0.11);
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                });
+            }
+        }
+
+        const soundFX = new SoundEffects();
+
+        // --- Game Setup & State ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const TARGET_SCORE = 100;
+        let score = 0;
+        let totalShots = 0;
+        let totalPops = 0;
+        let gameRunning = false;
+        let isPaused = false;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let spawnTimer = 0;
+
+        let balloons = [];
+        let particles = [];
+        let floatingTexts = [];
+        let laserRays = [];
+
+        // Track Pointer for Custom Glowing Star Cursor
+        let mouseX = width / 2;
+        let mouseY = height / 2;
+        let starRotation = 0;
+
+        window.addEventListener('pointermove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Adjusted Balloon Definitions: NOTICEABLY BIGGER & SLOWER FLOATING
+        const BALLOON_TYPES = [
+            {
+                type: 'standard',
+                points: 1,
+                radius: 54, // Significantly bigger
+                speedMin: 0.9, // Relaxed slower speed
+                speedMax: 1.4,
+                weight: 55,
+                colors: [
+                    { main: '#FF3366', highlight: '#FF99B3', neon: '#FF0055' }, // Neon Pink
+                    { main: '#3399FF', highlight: '#99CCFF', neon: '#0066FF' }, // Neon Blue
+                    { main: '#00E676', highlight: '#B9F6CA', neon: '#00C853' }, // Neon Green
+                    { main: '#FFB300', highlight: '#FFE57F', neon: '#FF8F00' }, // Neon Amber
+                    { main: '#E040FB', highlight: '#EA80FC', neon: '#AA00FF' }, // Neon Purple
+                    { main: '#00E5FF', highlight: '#84FFFF', neon: '#00B8D4' }  // Neon Cyan
+                ]
+            },
+            {
+                type: 'medium',
+                points: 2,
+                radius: 44, // Bigger
+                speedMin: 1.4,
+                speedMax: 2.0,
+                weight: 28,
+                colors: [
+                    { main: '#9D00FF', highlight: '#E2B3FF', neon: '#7900FF' },
+                    { main: '#FF007F', highlight: '#FF99DD', neon: '#CC0066' },
+                    { main: '#00F5D4', highlight: '#99FAF0', neon: '#00BB9B' }
+                ]
+            },
+            {
+                type: 'star',
+                points: 5,
+                radius: 36, // Bigger
+                speedMin: 2.0,
+                speedMax: 2.7,
+                weight: 12,
+                colors: [
+                    { main: '#3A1C71', highlight: '#D76D77', isMetallic: true }
+                ]
+            },
+            {
+                type: 'jackpot',
+                points: 10,
+                radius: 30, // Bigger
+                speedMin: 2.6,
+                speedMax: 3.4,
+                weight: 5,
+                colors: [
+                    { main: '#FFD700', highlight: '#FFF8DC', isGold: true }
+                ]
+            }
+        ];
+
+        // Background Star Particles
+        const bgStars = Array.from({ length: 45 }, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            size: Math.random() * 2 + 0.5,
+            alpha: Math.random() * 0.7 + 0.2,
+            twinkleSpeed: Math.random() * 0.02 + 0.005
+        }));
+
+        function getRandomType() {
+            const totalWeight = BALLOON_TYPES.reduce((acc, t) => acc + t.weight, 0);
+            let rand = Math.random() * totalWeight;
+            for (let t of BALLOON_TYPES) {
+                if (rand < t.weight) return t;
+                rand -= t.weight;
+            }
+            return BALLOON_TYPES[0];
+        }
+
+        class Balloon {
+            constructor() {
+                const config = getRandomType();
+                this.typeConfig = config;
+                this.points = config.points;
+                this.radius = config.radius;
+                
+                // Spawn position & Speed
+                this.x = this.radius + Math.random() * (width - this.radius * 2);
+                this.y = height + this.radius + Math.random() * 30;
+                this.speedY = config.speedMin + Math.random() * (config.speedMax - config.speedMin);
+                
+                // Smooth trajectory sway
+                this.swayAmplitude = 25 + Math.random() * 35;
+                this.swaySpeed = 0.012 + Math.random() * 0.018;
+                this.swayOffset = Math.random() * Math.PI * 2;
+                this.initialX = this.x;
+
+                // Color definition
+                const colorObj = config.colors[Math.floor(Math.random() * config.colors.length)];
+                this.color = colorObj.main;
+                this.highlight = colorObj.highlight;
+                this.neon = colorObj.neon || colorObj.main;
+                this.isGold = colorObj.isGold || false;
+                this.isMetallic = colorObj.isMetallic || false;
+            }
+
+            update(dt) {
+                this.y -= this.speedY;
+                this.swayOffset += this.swaySpeed;
+                this.x = this.initialX + Math.sin(this.swayOffset) * this.swayAmplitude;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Draw String with subtle sway
+                ctx.beginPath();
+                ctx.moveTo(0, this.radius);
+                ctx.quadraticCurveTo(
+                    Math.sin(this.swayOffset * 2) * 12, 
+                    this.radius + 20, 
+                    Math.sin(this.swayOffset * 2.5) * 6, 
+                    this.radius + 40
+                );
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.lineWidth = 1.8;
+                ctx.stroke();
+
+                // Draw Balloon Radial Gradient
+                const grad = ctx.createRadialGradient(
+                    -this.radius * 0.3, -this.radius * 0.35, this.radius * 0.1,
+                    0, 0, this.radius
+                );
+                
+                if (this.isGold) {
+                    grad.addColorStop(0, '#FFFFFF');
+                    grad.addColorStop(0.35, '#FFE600');
+                    grad.addColorStop(0.85, '#FF9900');
+                    grad.addColorStop(1, '#995C00');
+                } else if (this.isMetallic) {
+                    grad.addColorStop(0, '#E2B3FF');
+                    grad.addColorStop(0.5, '#7900FF');
+                    grad.addColorStop(1, '#00E5FF');
+                } else {
+                    grad.addColorStop(0, this.highlight);
+                    grad.addColorStop(0.7, this.color);
+                    grad.addColorStop(1, '#00000088');
+                }
+
+                // Neon Glow effect around balloons
+                ctx.shadowColor = this.isGold ? 'rgba(255,215,0,0.8)' : this.neon;
+                ctx.shadowBlur = 18;
+
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.radius, this.radius * 1.16, 0, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Reset shadow blur for inner details
+                ctx.shadowBlur = 0;
+
+                // Knot at the base
+                ctx.beginPath();
+                ctx.moveTo(-6, this.radius * 1.13);
+                ctx.lineTo(6, this.radius * 1.13);
+                ctx.lineTo(8, this.radius * 1.25);
+                ctx.lineTo(-8, this.radius * 1.25);
+                ctx.closePath();
+                ctx.fillStyle = this.color;
+                ctx.fill();
+
+                // Bright Shine Reflection
+                ctx.beginPath();
+                ctx.ellipse(-this.radius * 0.4, -this.radius * 0.45, this.radius * 0.28, this.radius * 0.14, -Math.PI / 4, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.fill();
+
+                // Score Badge Text
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = `black ${Math.max(16, Math.floor(this.radius * 0.75))}px 'Fredoka', sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.lineWidth = 4;
+                const textLabel = this.points === 5 ? '5★' : `+${this.points}`;
+                ctx.strokeText(textLabel, 0, 3);
+                ctx.fillText(textLabel, 0, 3);
+
+                ctx.restore();
+            }
+
+            isHit(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return (dx * dx) / (this.radius * this.radius) + (dy * dy) / ((this.radius * 1.16) * (this.radius * 1.16)) <= 1;
+            }
+        }
+
+        // --- Visual Effects Classes ---
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 5 + 2.5;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 7 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.gravity = 0.12;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.025 + 0.018;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= this.decay;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color = '#FFD700') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.alpha = 1;
+                this.vy = -2.2;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.alpha -= 0.022;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.font = "bold 32px 'Fredoka', sans-serif";
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.textAlign = 'center';
+                ctx.strokeText(this.text, this.x, this.y);
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        class LaserBurst {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.alpha = 1;
+            }
+            update() {
+                this.alpha -= 0.12;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 24, 0, Math.PI * 2);
+                ctx.strokeStyle = '#00E5FF';
+                ctx.shadowColor = '#00E5FF';
+                ctx.shadowBlur = 12;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // Custom Glowing Star Shooter Cursor Drawer
+        function drawStarCursor(ctx, cx, cy, spikes, outerRadius, innerRadius, angle) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(angle);
+
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            let step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(0, -outerRadius);
+
+            for (let i = 0; i < spikes; i++) {
+                x = Math.cos(rot) * outerRadius;
+                y = Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = Math.cos(rot) * innerRadius;
+                y = Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.lineTo(0, -outerRadius);
+            ctx.closePath();
+
+            // Glowing Styling
+            ctx.fillStyle = 'rgba(251, 191, 36, 0.45)';
+            ctx.strokeStyle = '#FBBF24';
+            ctx.lineWidth = 3;
+            ctx.shadowColor = '#FBBF24';
+            ctx.shadowBlur = 15;
+            ctx.fill();
+            ctx.stroke();
+
+            // Center targeting reticle point
+            ctx.beginPath();
+            ctx.arc(0, 0, 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function createConfetti() {
+            const colors = ['#FF3366', '#3399FF', '#00E676', '#FFB300', '#FFD700', '#00E5FF'];
+            for (let i = 0; i < 120; i++) {
+                particles.push(new Particle(width / 2 + (Math.random() * 200 - 100), height / 2, colors[Math.floor(Math.random() * colors.length)]));
+            }
+        }
+
+        // --- Core Loop ---
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw Dark Charcoal / Slate Gradient Background
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+            bgGrad.addColorStop(0, '#0f172a');
+            bgGrad.addColorStop(0.5, '#1e293b');
+            bgGrad.addColorStop(1, '#090d16');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Render Background Stars
+            bgStars.forEach(s => {
+                s.alpha += Math.sin(now * s.twinkleSpeed) * 0.01;
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0.1, Math.min(0.9, s.alpha))})`;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            if (gameRunning && !isPaused) {
+                // Update Elapsed Timer
+                elapsedTime = (performance.now() - startTime) / 1000;
+                document.getElementById('timerText').innerText = `${elapsedTime.toFixed(1)}s`;
+
+                // Spawn Balloons at relaxed intervals
+                spawnTimer += dt;
+                if (spawnTimer > 0.85) { // Slower, relaxed spawn rate
+                    balloons.push(new Balloon());
+                    spawnTimer = 0;
+                }
+
+                // Update & Render Balloons
+                for (let i = balloons.length - 1; i >= 0; i--) {
+                    const b = balloons[i];
+                    b.update(dt);
+                    b.draw(ctx);
+
+                    if (b.y < -b.radius * 2) {
+                        balloons.splice(i, 1);
+                    }
+                }
+            } else {
+                balloons.forEach(b => b.draw(ctx));
+            }
+
+            // Render Laser Effects
+            for (let i = laserRays.length - 1; i >= 0; i--) {
+                laserRays[i].update();
+                laserRays[i].draw(ctx);
+                if (laserRays[i].alpha <= 0) laserRays.splice(i, 1);
+            }
+
+            // Render Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(ctx);
+                if (particles[i].alpha <= 0) particles.splice(i, 1);
+            }
+
+            // Render Floating Text
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                floatingTexts[i].update();
+                floatingTexts[i].draw(ctx);
+                if (floatingTexts[i].alpha <= 0) floatingTexts.splice(i, 1);
+            }
+
+            // Rotate and draw custom Glowing Star Cursor over canvas
+            starRotation += 0.015;
+            drawStarCursor(ctx, mouseX, mouseY, 5, 20, 10, starRotation);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Interaction & Shooting ---
+        function handlePointerDown(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            if (!gameRunning || isPaused) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+
+            totalShots++;
+            laserRays.push(new LaserBurst(px, py));
+
+            let hit = false;
+            for (let i = balloons.length - 1; i >= 0; i--) {
+                const b = balloons[i];
+                if (b.isHit(px, py)) {
+                    hit = true;
+                    totalPops++;
+                    score += b.points;
+                    
+                    soundFX.playPop(b.points);
+
+                    // Burst particles on Pop
+                    for (let p = 0; p < 22; p++) {
+                        particles.push(new Particle(b.x, b.y, b.color));
+                    }
+
+                    // Floating Score Text
+                    const textColor = b.points >= 5 ? '#FFD700' : '#00E5FF';
+                    floatingTexts.push(new FloatingText(b.x, b.y, `+${b.points}`, textColor));
+
+                    balloons.splice(i, 1);
+                    updateHUD();
+
+                    if (score >= TARGET_SCORE) {
+                        triggerVictory();
+                    }
+                    break;
+                }
+            }
+
+            if (!hit) {
+                soundFX.playMiss();
+            }
+
+            updateAccuracyUI();
+        }
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+
+        function updateHUD() {
+            document.getElementById('scoreText').innerText = score;
+            const pct = Math.min(100, (score / TARGET_SCORE) * 100);
+            document.getElementById('progressBar').style.width = `${pct}%`;
+        }
+
+        function updateAccuracyUI() {
+            const acc = totalShots > 0 ? Math.round((totalPops / totalShots) * 100) : 100;
+            document.getElementById('accuracyText').innerText = `${acc}%`;
+        }
+
+        // --- Controls ---
+        function startGame() {
+            score = 0;
+            totalShots = 0;
+            totalPops = 0;
+            elapsedTime = 0;
+            balloons = [];
+            particles = [];
+            floatingTexts = [];
+            
+            updateHUD();
+            updateAccuracyUI();
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('victoryScreen').classList.add('hidden');
+            document.getElementById('pauseScreen').classList.add('hidden');
+
+            gameRunning = true;
+            isPaused = false;
+            startTime = performance.now();
+        }
+
+        function triggerVictory() {
+            gameRunning = false;
+            soundFX.playVictory();
+            createConfetti();
+
+            document.getElementById('finalTime').innerText = `${elapsedTime.toFixed(1)}s`;
+            const accuracy = totalShots > 0 ? Math.round((totalPops / totalShots) * 100) : 100;
+            document.getElementById('finalAccuracy').innerText = `${accuracy}%`;
+            document.getElementById('finalPopped').innerText = totalPops;
+            document.getElementById('finalShots').innerText = totalShots;
+
+            document.getElementById('victoryScreen').classList.remove('hidden');
+        }
+
+        // Button Event Listeners
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            soundFX.init();
+            startGame();
+        });
+
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            startGame();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (!gameRunning) return;
+            isPaused = true;
+            document.getElementById('pauseScreen').classList.remove('hidden');
+        });
+
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            isPaused = false;
+            startTime = performance.now() - (elapsedTime * 1000);
+            document.getElementById('pauseScreen').classList.add('hidden');
+        });
+
+        document.getElementById('restartPauseBtn').addEventListener('click', () => {
+            startGame();
+        });
+
+        document.getElementById('soundBtn').addEventListener('click', () => {
+            soundFX.enabled = !soundFX.enabled;
+            const icon = document.getElementById('soundIcon');
+            if (soundFX.enabled) {
+                icon.className = 'fas fa-volume-up text-lg';
+            } else {
+                icon.className = 'fas fa-volume-mute text-lg text-rose-500';
+            }
+        });
+
+        // Initialize Loop
+        window.onload = function() {
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
