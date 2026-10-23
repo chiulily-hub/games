@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deep Sea Creature Safari</title>
+    <!-- Tailwind CSS for UI controls and overlays -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for crisp icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Fredoka', cursive, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        body {
+            overflow: hidden;
+            background: #030814;
+            cursor: none; /* Custom crosshair drawn on canvas */
+        }
+        /* Pulse & Glow animations */
+        @keyframes pulse-glow {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(6, 182, 212, 0.6)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(6, 182, 212, 0.9)); }
+        }
+        .animate-glow {
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+        /* Neon Glassmorphism Panel */
+        .glass-panel {
+            background: rgba(4, 19, 38, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center m-0 p-0 overflow-hidden relative selection:bg-none">
+
+    <!-- Canvas Background & Game Area -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full z-0"></canvas>
+
+    <!-- Top Navigation / HUD Stats Bar -->
+    <div id="hud" class="absolute top-4 left-4 right-4 md:left-8 md:right-8 z-10 flex justify-between items-center pointer-events-none">
+        
+        <!-- Score & Target Progress -->
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-4 pointer-events-auto border border-cyan-500/30">
+            <div class="flex flex-col">
+                <span class="text-xs uppercase tracking-wider font-bold text-cyan-400">Target: 100 Pts</span>
+                <div class="flex items-baseline gap-1">
+                    <span id="scoreText" class="text-2xl md:text-4xl font-extrabold text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]">0</span>
+                    <span class="text-sm font-bold text-slate-400">/ 100</span>
+                </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="w-24 md:w-44 bg-slate-900/80 h-4 rounded-full overflow-hidden p-0.5 border border-cyan-900">
+                <div id="progressBar" class="h-full bg-gradient-to-r from-teal-400 via-cyan-500 to-amber-400 rounded-full transition-all duration-300 w-0"></div>
+            </div>
+        </div>
+
+        <!-- Timer & Stats -->
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center gap-6 pointer-events-auto border border-blue-500/30">
+            <div class="text-center">
+                <span class="text-xs uppercase tracking-wider font-bold text-slate-400 block">Time</span>
+                <span id="timerText" class="text-xl md:text-2xl font-bold text-cyan-300">0.0s</span>
+            </div>
+            <div class="text-center hidden sm:block">
+                <span class="text-xs uppercase tracking-wider font-bold text-slate-400 block">Accuracy</span>
+                <span id="accuracyText" class="text-xl md:text-2xl font-bold text-emerald-400">100%</span>
+            </div>
+            
+            <!-- Controls (Pause/Sound) -->
+            <div class="flex items-center gap-2 border-l border-slate-700/60 pl-4">
+                <button id="soundBtn" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-cyan-400 flex items-center justify-center transition border border-slate-600 active:scale-95" title="Toggle Sound">
+                    <i id="soundIcon" class="fas fa-volume-up text-lg"></i>
+                </button>
+                <button id="pauseBtn" class="w-10 h-10 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-amber-400 flex items-center justify-center transition border border-slate-600 active:scale-95" title="Pause Game">
+                    <i id="pauseIcon" class="fas fa-pause text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Start Overlay Screen -->
+    <div id="startScreen" class="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 backdrop-blur-md transition-opacity duration-300">
+        <div class="bg-slate-900 border-2 border-cyan-500/40 rounded-3xl p-6 md:p-10 max-w-lg w-11/12 text-center shadow-[0_0_60px_rgba(6,182,212,0.3)] relative overflow-hidden transform transition-all">
+            
+            <div class="text-5xl mb-3 flex justify-center gap-4">
+                <span class="animate-bounce" style="animation-delay: 0s;">🐋</span>
+                <span class="animate-bounce" style="animation-delay: 0.1s;">🦈</span>
+                <span class="animate-bounce" style="animation-delay: 0.2s;">🐠</span>
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-amber-400 mb-2">
+                Deep Sea Safari
+            </h1>
+            <p class="text-slate-300 text-sm md:text-base font-medium mb-4">Tag sea creatures to reach <span class="text-amber-400 font-bold">100 Points</span>!</p>
+
+            <div class="text-xs text-cyan-200 bg-cyan-950/60 border border-cyan-500/30 rounded-2xl p-3 mb-5 text-left space-y-1">
+                <p>🐋 <b>Giant Blue Whale:</b> Swims across the ocean and spits out new sea creatures!</p>
+                <p>🦈 <b>Apex Great White Shark:</b> Hunts down fish, seahorses, and jellyfish!</p>
+                <p>🎯 Tag smaller sea creatures before the sharks eat them up!</p>
+            </div>
+
+            <!-- Sea Creature Legend Grid -->
+            <div class="grid grid-cols-2 gap-2 text-xs md:text-sm font-bold text-slate-200 bg-slate-800/70 p-4 rounded-2xl mb-6 border border-slate-700">
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-cyan-500/30">
+                    <span class="text-xl">🐠</span>
+                    <span>Clownfish (+1)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-teal-500/30">
+                    <span class="text-xl">🪼</span>
+                    <span>Jellyfish (+2)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-amber-500/30">
+                    <span class="text-xl">🐴</span>
+                    <span>Seahorse (+5★)</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-900/80 p-2 rounded-xl border border-pink-500/30">
+                    <span class="text-xl">🐙</span>
+                    <span>Golden Squid (+10)</span>
+                </div>
+            </div>
+
+            <button id="startGameBtn" class="w-full py-4 bg-gradient-to-r from-cyan-500 via-teal-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-slate-950 font-extrabold text-xl rounded-2xl shadow-[0_0_25px_rgba(20,184,166,0.5)] transform transition active:scale-95 flex items-center justify-center gap-3">
+                <i class="fas fa-water text-lg"></i> DIVE INTO OCEAN
+            </button>
+        </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pauseScreen" class="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="bg-slate-900 rounded-3xl p-8 max-w-sm w-11/12 text-center shadow-2xl border-2 border-amber-500/40">
+            <h2 class="text-3xl font-bold text-amber-400 mb-2"><i class="fas fa-pause-circle mr-2"></i>Game Paused</h2>
+            <p class="text-slate-400 text-sm mb-6">Take your time. The ocean creatures are waiting!</p>
+            <button id="resumeBtn" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-lg rounded-xl shadow-lg transition mb-3">
+                Resume Game
+            </button>
+            <button id="restartPauseBtn" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-lg rounded-xl transition border border-slate-700">
+                Restart Game
+            </button>
+        </div>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victoryScreen" class="absolute inset-0 z-30 flex items-center justify-center bg-slate-950/90 backdrop-blur-md hidden">
+        <div class="bg-slate-900 border-2 border-amber-400/60 rounded-3xl p-6 md:p-8 max-w-md w-11/12 text-center shadow-[0_0_60px_rgba(251,191,36,0.3)] relative animate-glow">
+            <div class="w-20 h-20 mx-auto -mt-12 bg-gradient-to-tr from-amber-400 to-yellow-300 rounded-full flex items-center justify-center border-4 border-slate-900 shadow-xl text-4xl text-slate-950 mb-2">
+                🏆
+            </div>
+
+            <h2 class="text-3xl font-extrabold text-slate-100 mb-1">SAFARI COMPLETE!</h2>
+            <p class="text-sm text-cyan-400 font-semibold mb-6">100 Ocean Points Accomplished!</p>
+
+            <!-- Final Stats Grid -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Total Time</span>
+                    <span id="finalTime" class="text-2xl font-black text-amber-400">0.0s</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Accuracy</span>
+                    <span id="finalAccuracy" class="text-2xl font-black text-emerald-400">0%</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Creatures Tagged</span>
+                    <span id="finalPopped" class="text-2xl font-black text-cyan-400">0</span>
+                </div>
+                <div class="bg-slate-800/80 border border-slate-700 p-3 rounded-2xl text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 block">Total Shots</span>
+                    <span id="finalShots" class="text-2xl font-black text-pink-400">0</span>
+                </div>
+            </div>
+
+            <button id="playAgainBtn" class="w-full py-4 bg-gradient-to-r from-amber-400 via-orange-500 to-pink-500 hover:from-amber-300 hover:to-pink-400 text-slate-950 font-extrabold text-xl rounded-2xl shadow-lg transform transition active:scale-95 flex items-center justify-center gap-2">
+                <i class="fas fa-redo"></i> DIVE AGAIN
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Web Audio API Synthesizer ---
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playPop(score = 1) {
+                if (!this.enabled) return;
+                this.init();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                let baseFreq = 400 + (score * 120);
+                if (score === 10) baseFreq = 1200;
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(baseFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.8, now + 0.12);
+
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.12);
+            }
+
+            playBite() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(140, now);
+                osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.18);
+            }
+
+            playSpit() {
+                if (!this.enabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.exponentialRampToValueAtTime(500, now + 0.25);
+
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+
+            playMiss() {
+                if (!this.enabled) return;
+                this.init();
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(60, now + 0.08);
+
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.08);
+            }
+
+            playVictory() {
+                if (!this.enabled) return;
+                this.init();
+
+                const notes = [523.25, 659.25, 783.99, 1046.50, 1318.51];
+                notes.forEach((freq, idx) => {
+                    const now = this.ctx.currentTime + (idx * 0.11);
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                });
+            }
+        }
+
+        const soundFX = new SoundEffects();
+
+        // --- Game Setup & State ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width, height;
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const TARGET_SCORE = 100;
+        let score = 0;
+        let totalShots = 0;
+        let totalPops = 0;
+        let gameRunning = false;
+        let isPaused = false;
+        let startTime = 0;
+        let elapsedTime = 0;
+
+        let creatures = [];
+        let sharks = [];
+        let whales = [];
+        let particles = [];
+        let floatingTexts = [];
+        let bubbleEffects = [];
+        let laserRays = [];
+
+        // Track Pointer for Custom Glowing Crosshair Cursor
+        let mouseX = width / 2;
+        let mouseY = height / 2;
+
+        window.addEventListener('pointermove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+        });
+
+        // Sea Creature Types Configuration
+        const CREATURE_TYPES = [
+            { type: 'fish', points: 1, radius: 28, speedYMin: 0.8, speedYMax: 1.5, weight: 50 },
+            { type: 'jellyfish', points: 2, radius: 32, speedYMin: 1.0, speedYMax: 1.8, weight: 30 },
+            { type: 'seahorse', points: 5, radius: 26, speedYMin: 1.4, speedYMax: 2.2, weight: 14 },
+            { type: 'squid', points: 10, radius: 34, speedYMin: 2.0, speedYMax: 3.0, weight: 6 }
+        ];
+
+        // Light Caustics / Water Bubbles background
+        const waterBubbles = Array.from({ length: 50 }, () => ({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            size: Math.random() * 6 + 2,
+            speed: Math.random() * 0.8 + 0.3,
+            alpha: Math.random() * 0.4 + 0.1
+        }));
+
+        function getRandomCreatureType() {
+            const totalWeight = CREATURE_TYPES.reduce((acc, t) => acc + t.weight, 0);
+            let rand = Math.random() * totalWeight;
+            for (let t of CREATURE_TYPES) {
+                if (rand < t.weight) return t.type;
+                rand -= t.weight;
+            }
+            return 'fish';
+        }
+
+        // --- Realistic Vector Drawing Helpers ---
+
+        // Realistic Clownfish Drawing
+        function drawFish(ctx, radius, animTime) {
+            ctx.save();
+            const tailWiggle = Math.sin(animTime * 10) * 0.2;
+            
+            // Fish Body Gradient (Clownfish style)
+            const bodyGrad = ctx.createLinearGradient(-radius, 0, radius, 0);
+            bodyGrad.addColorStop(0, '#ff4500');
+            bodyGrad.addColorStop(0.5, '#ff7f50');
+            bodyGrad.addColorStop(1, '#ff3800');
+
+            // Tail Fin
+            ctx.save();
+            ctx.translate(-radius * 0.8, 0);
+            ctx.rotate(tailWiggle);
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(-radius * 0.7, -radius * 0.6);
+            ctx.quadraticCurveTo(-radius * 0.9, 0, -radius * 0.7, radius * 0.6);
+            ctx.closePath();
+            ctx.fillStyle = '#ff4500';
+            ctx.fill();
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.restore();
+
+            // Main Elliptical Body
+            ctx.beginPath();
+            ctx.ellipse(0, 0, radius, radius * 0.65, 0, 0, Math.PI * 2);
+            ctx.fillStyle = bodyGrad;
+            ctx.fill();
+
+            // White Stripe Patterns
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(-radius * 0.2, 0, radius * 0.2, radius * 0.6, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(radius * 0.2, 0, radius * 0.18, radius * 0.55, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Black accent line on stripes
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            // Dorsal & Pectoral Fins
+            ctx.fillStyle = '#ff4500';
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.2, -radius * 0.6);
+            ctx.quadraticCurveTo(0, -radius * 1.0, radius * 0.3, -radius * 0.55);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(radius * 0.55, -radius * 0.15, radius * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(radius * 0.6, -radius * 0.15, radius * 0.1, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Score Badge
+            drawScoreBadge(ctx, 0, 0, '+1');
+
+            ctx.restore();
+        }
+
+        // Realistic Jellyfish Drawing
+        function drawJellyfish(ctx, radius, animTime) {
+            ctx.save();
+            const pulse = Math.sin(animTime * 4) * 0.15;
+            const rWidth = radius * (1 + pulse);
+            const rHeight = radius * (1 - pulse);
+
+            // Bell Gradient
+            const bellGrad = ctx.createRadialGradient(0, -rHeight * 0.3, 0, 0, 0, rWidth);
+            bellGrad.addColorStop(0, 'rgba(0, 245, 212, 0.95)');
+            bellGrad.addColorStop(0.6, 'rgba(121, 0, 255, 0.8)');
+            bellGrad.addColorStop(1, 'rgba(0, 184, 212, 0.4)');
+
+            // Translucent Glowing Dome
+            ctx.shadowColor = '#00f5d4';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(0, 0, rWidth, Math.PI, 0, false);
+            ctx.quadraticCurveTo(0, rHeight * 0.2, -rWidth, 0);
+            ctx.fillStyle = bellGrad;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Flowing Tentacles
+            for (let i = -3; i <= 3; i++) {
+                const offsetX = (i * rWidth) / 4;
+                const wave = Math.sin(animTime * 6 + i) * 8;
+                ctx.beginPath();
+                ctx.moveTo(offsetX, 0);
+                ctx.quadraticCurveTo(offsetX + wave, rHeight * 0.8, offsetX - wave, rHeight * 1.5);
+                ctx.strokeStyle = i % 2 === 0 ? '#00f5d4' : '#e2b3ff';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
+            }
+
+            // Inner organ light
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, -rHeight * 0.3, rWidth * 0.3, rHeight * 0.2, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            drawScoreBadge(ctx, 0, -rHeight * 0.2, '+2');
+
+            ctx.restore();
+        }
+
+        // Realistic Seahorse Drawing
+        function drawSeahorse(ctx, radius, animTime) {
+            ctx.save();
+            const floatSway = Math.sin(animTime * 3) * 0.1;
+            ctx.rotate(floatSway);
+
+            // Seahorse Gradient Body
+            const sGrad = ctx.createLinearGradient(0, -radius * 1.2, 0, radius * 1.2);
+            sGrad.addColorStop(0, '#ffd700');
+            sGrad.addColorStop(0.5, '#ff8c00');
+            sGrad.addColorStop(1, '#e65100');
+
+            ctx.fillStyle = sGrad;
+            ctx.strokeStyle = '#ffe082';
+            ctx.lineWidth = 2;
+
+            // Curved Crown / Snout Head
+            ctx.beginPath();
+            ctx.arc(0, -radius * 0.8, radius * 0.45, 0, Math.PI * 2); // Head
+            ctx.fill();
+            ctx.stroke();
+
+            // Snout
+            ctx.beginPath();
+            ctx.rect(radius * 0.2, -radius * 0.9, radius * 0.5, radius * 0.22);
+            ctx.fill();
+
+            // Curved Chest / Pouch
+            ctx.beginPath();
+            ctx.moveTo(0, -radius * 0.4);
+            ctx.quadraticCurveTo(radius * 0.7, 0, 0, radius * 0.7);
+            ctx.quadraticCurveTo(-radius * 0.4, 0, 0, -radius * 0.4);
+            ctx.fill();
+
+            // Curled Spiral Tail
+            ctx.beginPath();
+            ctx.moveTo(0, radius * 0.7);
+            ctx.quadraticCurveTo(-radius * 0.6, radius * 1.2, -radius * 0.2, radius * 1.4);
+            ctx.quadraticCurveTo(radius * 0.2, radius * 1.3, 0, radius * 1.1);
+            ctx.strokeStyle = '#ff8c00';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+
+            // Eye
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(radius * 0.1, -radius * 0.85, radius * 0.08, 0, Math.PI * 2);
+            ctx.fill();
+
+            drawScoreBadge(ctx, 0, 0, '5★');
+
+            ctx.restore();
+        }
+
+        // Realistic Golden Squid
+        function drawSquid(ctx, radius, animTime) {
+            ctx.save();
+            const jetPulse = Math.sin(animTime * 8) * 0.15;
+
+            // Shiny Mantle
+            const sGrad = ctx.createLinearGradient(-radius, 0, radius, 0);
+            sGrad.addColorStop(0, '#e040fb');
+            sGrad.addColorStop(0.5, '#ff80ab');
+            sGrad.addColorStop(1, '#7c4dff');
+
+            // Mantle / Head Cone
+            ctx.beginPath();
+            ctx.moveTo(0, -radius * (1.2 + jetPulse));
+            ctx.quadraticCurveTo(radius * 0.9, -radius * 0.2, radius * 0.7, radius * 0.3);
+            ctx.lineTo(-radius * 0.7, radius * 0.3);
+            ctx.quadraticCurveTo(-radius * 0.9, -radius * 0.2, 0, -radius * (1.2 + jetPulse));
+            ctx.fillStyle = sGrad;
+            ctx.shadowColor = '#e040fb';
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Tentacles trailing bottom
+            for (let i = -3; i <= 3; i++) {
+                const tx = (i * radius) / 4;
+                const wave = Math.sin(animTime * 10 + i) * 6;
+                ctx.beginPath();
+                ctx.moveTo(tx, radius * 0.3);
+                ctx.lineTo(tx + wave, radius * 1.4);
+                ctx.strokeStyle = '#ff80ab';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            // Big Luminous Eye
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#00e5ff';
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+
+            drawScoreBadge(ctx, 0, -radius * 0.4, '+10');
+
+            ctx.restore();
+        }
+
+        function drawScoreBadge(ctx, x, y, label) {
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = `900 16px 'Fredoka', sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.lineWidth = 4;
+            ctx.strokeText(label, x, y);
+            ctx.fillText(label, x, y);
+            ctx.restore();
+        }
+
+        // --- Class Definitions for Ocean Entity Logic ---
+
+        class SeaCreature {
+            constructor(x, y, forcedType = null) {
+                this.type = forcedType || getRandomCreatureType();
+                const config = CREATURE_TYPES.find(c => c.type === this.type);
+                
+                this.points = config.points;
+                this.radius = config.radius;
+                
+                this.x = x !== undefined ? x : (this.radius + Math.random() * (width - this.radius * 2));
+                this.y = y !== undefined ? y : (height + this.radius + Math.random() * 20);
+                
+                this.speedY = config.speedYMin + Math.random() * (config.speedYMax - config.speedYMin);
+                this.swayAmplitude = 20 + Math.random() * 30;
+                this.swaySpeed = 0.015 + Math.random() * 0.02;
+                this.swayOffset = Math.random() * Math.PI * 2;
+                this.initialX = this.x;
+
+                this.animTime = Math.random() * 100;
+            }
+
+            update(dt) {
+                this.animTime += dt;
+                this.y -= this.speedY;
+                this.swayOffset += this.swaySpeed;
+                this.x = this.initialX + Math.sin(this.swayOffset) * this.swayAmplitude;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.type === 'fish') drawFish(ctx, this.radius, this.animTime);
+                else if (this.type === 'jellyfish') drawJellyfish(ctx, this.radius, this.animTime);
+                else if (this.type === 'seahorse') drawSeahorse(ctx, this.radius, this.animTime);
+                else if (this.type === 'squid') drawSquid(ctx, this.radius, this.animTime);
+
+                ctx.restore();
+            }
+
+            isHit(px, py) {
+                const dx = px - this.x;
+                const dy = py - this.y;
+                return (dx * dx + dy * dy) <= (this.radius * 1.2) * (this.radius * 1.2);
+            }
+        }
+
+        // HUGE APEX GREAT WHITE SHARK
+        class Shark {
+            constructor() {
+                this.direction = Math.random() > 0.5 ? 1 : -1; // 1: Left to Right, -1: Right to Left
+                this.width = 240; // REALLY BIG
+                this.height = 110;
+                this.x = this.direction === 1 ? -this.width : width + this.width;
+                this.y = 100 + Math.random() * (height - 250);
+                this.speedX = (1.8 + Math.random() * 1.2) * this.direction;
+                this.animTime = 0;
+                this.mouthOpen = 0;
+                this.targetCreature = null;
+            }
+
+            update(dt, creaturesList) {
+                this.animTime += dt;
+
+                // Find nearest creature to hunt & eat!
+                let closest = null;
+                let minDist = 300;
+                creaturesList.forEach(c => {
+                    const dist = Math.hypot(c.x - this.x, c.y - this.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        closest = c;
+                    }
+                });
+
+                this.targetCreature = closest;
+
+                if (this.targetCreature) {
+                    // Slight vertical tracking toward prey
+                    const dy = this.targetCreature.y - this.y;
+                    this.y += Math.sign(dy) * 0.8;
+                    
+                    // Mouth opens when near target
+                    if (minDist < 120) {
+                        this.mouthOpen = Math.min(1, this.mouthOpen + dt * 6);
+                    } else {
+                        this.mouthOpen = Math.max(0, this.mouthOpen - dt * 4);
+                    }
+
+                    // Eat target creature if close enough
+                    if (minDist < 60) {
+                        const index = creaturesList.indexOf(this.targetCreature);
+                        if (index !== -1) {
+                            soundFX.playBite();
+                            // Bite bloodless particle splashes
+                            for (let p = 0; p < 15; p++) {
+                                particles.push(new Particle(this.targetCreature.x, this.targetCreature.y, '#00e5ff'));
+                            }
+                            floatingTexts.push(new FloatingText(this.x, this.y - 40, 'CHOMP!', '#ff3366'));
+                            creaturesList.splice(index, 1);
+                        }
+                    }
+                } else {
+                    this.mouthOpen = Math.max(0, this.mouthOpen - dt * 3);
+                }
+
+                this.x += this.speedX;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.direction === -1) {
+                    ctx.scale(-1, 1);
+                }
+
+                const tailWiggle = Math.sin(this.animTime * 5) * 0.15;
+
+                // Shark Body Metallic Dark Blue / Steel Grey Gradient
+                const sGrad = ctx.createLinearGradient(0, -this.height * 0.5, 0, this.height * 0.5);
+                sGrad.addColorStop(0, '#334155');
+                sGrad.addColorStop(0.55, '#475569');
+                sGrad.addColorStop(0.6, '#f8fafc'); // White Underbelly
+                sGrad.addColorStop(1, '#cbd5e1');
+
+                // Tail Fin
+                ctx.save();
+                ctx.translate(-this.width * 0.4, 0);
+                ctx.rotate(tailWiggle);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-this.width * 0.25, -this.height * 0.65);
+                ctx.quadraticCurveTo(-this.width * 0.2, 0, -this.width * 0.25, this.height * 0.45);
+                ctx.closePath();
+                ctx.fillStyle = '#334155';
+                ctx.fill();
+                ctx.restore();
+
+                // Main Sleek Torpedo Body
+                ctx.beginPath();
+                ctx.moveTo(-this.width * 0.4, 0);
+                ctx.quadraticCurveTo(-this.width * 0.1, -this.height * 0.55, this.width * 0.3, -this.height * 0.2); // Back curve to snout
+                ctx.lineTo(this.width * 0.45, 0); // Sharp Snout Nose
+
+                // Jaw / Mouth opening animation
+                const mouthGap = this.mouthOpen * 25;
+                ctx.lineTo(this.width * 0.28, mouthGap);
+                ctx.quadraticCurveTo(0, this.height * 0.5, -this.width * 0.4, 0); // Belly curve
+                ctx.fillStyle = sGrad;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 20;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Iconic Dorsal Fin
+                ctx.beginPath();
+                ctx.moveTo(-this.width * 0.05, -this.height * 0.45);
+                ctx.lineTo(this.width * 0.08, -this.height * 0.95); // High fin tip
+                ctx.quadraticCurveTo(this.width * 0.15, -this.height * 0.5, this.width * 0.2, -this.height * 0.3);
+                ctx.fillStyle = '#1e293b';
+                ctx.fill();
+
+                // Pectoral Side Fin
+                ctx.beginPath();
+                ctx.moveTo(this.width * 0.05, 10);
+                ctx.lineTo(-this.width * 0.08, this.height * 0.65);
+                ctx.lineTo(this.width * 0.1, 15);
+                ctx.fillStyle = '#334155';
+                ctx.fill();
+
+                // Sharp White Teeth inside mouth if open
+                if (this.mouthOpen > 0.2) {
+                    ctx.fillStyle = '#ffffff';
+                    for (let i = 0; i < 5; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(this.width * 0.3 + (i * 6), 0);
+                        ctx.lineTo(this.width * 0.33 + (i * 6), mouthGap);
+                        ctx.lineTo(this.width * 0.36 + (i * 6), 0);
+                        ctx.fill();
+                    }
+                }
+
+                // Gills
+                ctx.strokeStyle = '#1e293b';
+                ctx.lineWidth = 2.5;
+                for (let g = 0; g < 3; g++) {
+                    ctx.beginPath();
+                    ctx.arc(this.width * 0.12 + (g * 8), -5, 14, Math.PI * 0.7, Math.PI * 1.3);
+                    ctx.stroke();
+                }
+
+                // Cold Apex Predator Eye
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(this.width * 0.32, -this.height * 0.12, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(this.width * 0.33, -this.height * 0.14, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // GIANT MAJESTIC BLUE WHALE
+        class Whale {
+            constructor() {
+                this.direction = Math.random() > 0.5 ? 1 : -1;
+                this.width = 380; // ENORMOUS GIANT
+                this.height = 160;
+                this.x = this.direction === 1 ? -this.width : width + this.width;
+                this.y = 120 + Math.random() * (height - 300);
+                this.speedX = (0.8 + Math.random() * 0.6) * this.direction;
+                this.animTime = 0;
+                this.spitCooldown = 0;
+            }
+
+            update(dt, creaturesList) {
+                this.animTime += dt;
+                this.x += this.speedX;
+
+                // Spit out sea creatures periodically!
+                this.spitCooldown += dt;
+                if (this.spitCooldown > 2.8) {
+                    this.spitCooldown = 0;
+                    this.spitCreature(creaturesList);
+                }
+            }
+
+            spitCreature(creaturesList) {
+                soundFX.playSpit();
+
+                // Mouth blowhole position calculation
+                const blowX = this.x + (this.direction === 1 ? this.width * 0.35 : -this.width * 0.35);
+                const blowY = this.y - this.height * 0.2;
+
+                // Spawn multiple bubble water particles
+                for (let b = 0; b < 20; b++) {
+                    bubbleEffects.push(new Particle(blowX, blowY, 'rgba(186, 230, 253, 0.8)'));
+                }
+
+                // Spit out a new sea creature into the ocean!
+                const newCreature = new SeaCreature(blowX, blowY);
+                newCreature.speedY = 1.2 + Math.random() * 1.5;
+                creaturesList.push(newCreature);
+
+                floatingTexts.push(new FloatingText(blowX, blowY - 30, 'SPUTTER! 🐳', '#38bdf8'));
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                if (this.direction === -1) {
+                    ctx.scale(-1, 1);
+                }
+
+                const tailWave = Math.sin(this.animTime * 3) * 0.12;
+
+                // Deep Cyan Blue Whale Gradient
+                const wGrad = ctx.createLinearGradient(0, -this.height * 0.6, 0, this.height * 0.6);
+                wGrad.addColorStop(0, '#0284c7');
+                wGrad.addColorStop(0.6, '#0369a1');
+                wGrad.addColorStop(0.65, '#e0f2fe'); // Grooved Underbelly
+                wGrad.addColorStop(1, '#bae6fd');
+
+                // Massive Fluke Tail
+                ctx.save();
+                ctx.translate(-this.width * 0.42, 0);
+                ctx.rotate(tailWave);
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(-this.width * 0.15, -this.height * 0.6, -this.width * 0.2, -this.height * 0.5);
+                ctx.quadraticCurveTo(-this.width * 0.12, 0, -this.width * 0.2, this.height * 0.5);
+                ctx.quadraticCurveTo(-this.width * 0.15, this.height * 0.6, 0, 0);
+                ctx.fillStyle = '#0369a1';
+                ctx.fill();
+                ctx.restore();
+
+                // Giant Curved Body Contour
+                ctx.beginPath();
+                ctx.moveTo(-this.width * 0.4, 0);
+                ctx.quadraticCurveTo(-this.width * 0.1, -this.height * 0.6, this.width * 0.2, -this.height * 0.45); // Huge rounded head
+                ctx.quadraticCurveTo(this.width * 0.48, -this.height * 0.2, this.width * 0.45, 0); // Snout
+                ctx.quadraticCurveTo(this.width * 0.2, this.height * 0.55, -this.width * 0.4, 0); // Belly
+                ctx.fillStyle = wGrad;
+                ctx.shadowColor = 'rgba(2, 132, 199, 0.4)';
+                ctx.shadowBlur = 25;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // Belly Grooves / Pleats
+                ctx.strokeStyle = '#7dd3fc';
+                ctx.lineWidth = 2;
+                for (let p = 0; p < 6; p++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-this.width * 0.1 + (p * 25), this.height * 0.15);
+                    ctx.quadraticCurveTo(this.width * 0.1 + (p * 20), this.height * 0.38, this.width * 0.35, 10);
+                    ctx.stroke();
+                }
+
+                // Small Pectoral Paddle Fin
+                ctx.beginPath();
+                ctx.ellipse(0, this.height * 0.15, this.width * 0.12, this.height * 0.15, Math.PI * 0.2, 0, Math.PI * 2);
+                ctx.fillStyle = '#0284c7';
+                ctx.fill();
+
+                // Eye
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.arc(this.width * 0.3, -this.height * 0.05, 5, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Water Blowhole Spout Top
+                ctx.fillStyle = '#38bdf8';
+                ctx.beginPath();
+                ctx.ellipse(this.width * 0.1, -this.height * 0.48, 12, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // --- Visual Effects Classes ---
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.radius = Math.random() * 6 + 2;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 6 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.gravity = -0.05; // Floating upwards
+                this.alpha = 1;
+                this.decay = Math.random() * 0.03 + 0.015;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= this.decay;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color = '#FFD700') {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.alpha = 1;
+                this.vy = -2.0;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.alpha -= 0.02;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.font = "900 30px 'Fredoka', sans-serif";
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 10;
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4;
+                ctx.textAlign = 'center';
+                ctx.strokeText(this.text, this.x, this.y);
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        class LaserBurst {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.alpha = 1;
+            }
+            update() {
+                this.alpha -= 0.12;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 26, 0, Math.PI * 2);
+                ctx.strokeStyle = '#38bdf8';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 15;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // Custom Glowing Submarine Crosshair Cursor
+        function drawCrosshairCursor(ctx, cx, cy) {
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            ctx.beginPath();
+            ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = '#38bdf8';
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+
+            // Inner reticle dot
+            ctx.beginPath();
+            ctx.arc(0, 0, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#fbbf24';
+            ctx.fill();
+
+            // Crosshair ticks
+            ctx.strokeStyle = '#fbbf24';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-26, 0); ctx.lineTo(-12, 0);
+            ctx.moveTo(12, 0); ctx.lineTo(26, 0);
+            ctx.moveTo(0, -26); ctx.lineTo(0, -12);
+            ctx.moveTo(0, 12); ctx.lineTo(0, 26);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function createVictoryConfetti() {
+            const colors = ['#38bdf8', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
+            for (let i = 0; i < 120; i++) {
+                particles.push(new Particle(width / 2 + (Math.random() * 200 - 100), height / 2, colors[Math.floor(Math.random() * colors.length)]));
+            }
+        }
+
+        // --- Core Loop ---
+        let lastTime = performance.now();
+        let sharkSpawnTimer = 0;
+        let whaleSpawnTimer = 0;
+        let creatureSpawnTimer = 0;
+
+        function gameLoop(now) {
+            const dt = Math.min(0.1, (now - lastTime) / 1000);
+            lastTime = now;
+
+            ctx.clearRect(0, 0, width, height);
+
+            // Underwater Abyss Ocean Gradient Background
+            const oceanGrad = ctx.createLinearGradient(0, 0, 0, height);
+            oceanGrad.addColorStop(0, '#0369a1');
+            oceanGrad.addColorStop(0.35, '#075985');
+            oceanGrad.addColorStop(0.7, '#0c4a6e');
+            oceanGrad.addColorStop(1, '#030712');
+            ctx.fillStyle = oceanGrad;
+            ctx.fillRect(0, 0, width, height);
+
+            // Render Water Bubbles
+            waterBubbles.forEach(b => {
+                b.y -= b.speed;
+                if (b.y < -10) b.y = height + 10;
+                ctx.fillStyle = `rgba(186, 230, 253, ${b.alpha})`;
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            if (gameRunning && !isPaused) {
+                // Update Elapsed Timer
+                elapsedTime = (performance.now() - startTime) / 1000;
+                document.getElementById('timerText').innerText = `${elapsedTime.toFixed(1)}s`;
+
+                // Spawn Sea Creatures from sea floor naturally
+                creatureSpawnTimer += dt;
+                if (creatureSpawnTimer > 0.9) {
+                    creatures.push(new SeaCreature());
+                    creatureSpawnTimer = 0;
+                }
+
+                // Spawn Giant Whales
+                whaleSpawnTimer += dt;
+                if (whales.length === 0 || whaleSpawnTimer > 12) {
+                    whales.push(new Whale());
+                    whaleSpawnTimer = 0;
+                }
+
+                // Spawn Apex Sharks
+                sharkSpawnTimer += dt;
+                if (sharks.length === 0 || sharkSpawnTimer > 9) {
+                    sharks.push(new Shark());
+                    sharkSpawnTimer = 0;
+                }
+
+                // Update & Render Whales
+                for (let i = whales.length - 1; i >= 0; i--) {
+                    const w = whales[i];
+                    w.update(dt, creatures);
+                    w.draw(ctx);
+                    if ((w.direction === 1 && w.x > width + w.width * 2) || (w.direction === -1 && w.x < -w.width * 2)) {
+                        whales.splice(i, 1);
+                    }
+                }
+
+                // Update & Render Sharks
+                for (let i = sharks.length - 1; i >= 0; i--) {
+                    const s = sharks[i];
+                    s.update(dt, creatures);
+                    s.draw(ctx);
+                    if ((s.direction === 1 && s.x > width + s.width * 2) || (s.direction === -1 && s.x < -s.width * 2)) {
+                        sharks.splice(i, 1);
+                    }
+                }
+
+                // Update & Render Creatures
+                for (let i = creatures.length - 1; i >= 0; i--) {
+                    const c = creatures[i];
+                    c.update(dt);
+                    c.draw(ctx);
+                    if (c.y < -c.radius * 2) {
+                        creatures.splice(i, 1);
+                    }
+                }
+            } else {
+                whales.forEach(w => w.draw(ctx));
+                sharks.forEach(s => s.draw(ctx));
+                creatures.forEach(c => c.draw(ctx));
+            }
+
+            // Render Visual Effects
+            for (let i = bubbleEffects.length - 1; i >= 0; i--) {
+                bubbleEffects[i].update();
+                bubbleEffects[i].draw(ctx);
+                if (bubbleEffects[i].alpha <= 0) bubbleEffects.splice(i, 1);
+            }
+
+            for (let i = laserRays.length - 1; i >= 0; i--) {
+                laserRays[i].update();
+                laserRays[i].draw(ctx);
+                if (laserRays[i].alpha <= 0) laserRays.splice(i, 1);
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(ctx);
+                if (particles[i].alpha <= 0) particles.splice(i, 1);
+            }
+
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                floatingTexts[i].update();
+                floatingTexts[i].draw(ctx);
+                if (floatingTexts[i].alpha <= 0) floatingTexts.splice(i, 1);
+            }
+
+            // Draw Submarine Reticle Crosshair Cursor
+            drawCrosshairCursor(ctx, mouseX, mouseY);
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- Interaction & Tagging ---
+        function handlePointerDown(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+
+            if (!gameRunning || isPaused) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const px = e.clientX - rect.left;
+            const py = e.clientY - rect.top;
+
+            totalShots++;
+            laserRays.push(new LaserBurst(px, py));
+
+            let hit = false;
+            for (let i = creatures.length - 1; i >= 0; i--) {
+                const c = creatures[i];
+                if (c.isHit(px, py)) {
+                    hit = true;
+                    totalPops++;
+                    score += c.points;
+                    
+                    soundFX.playPop(c.points);
+
+                    // Splash particles on Tag
+                    for (let p = 0; p < 20; p++) {
+                        particles.push(new Particle(c.x, c.y, '#38bdf8'));
+                    }
+
+                    // Floating Score Text
+                    const textColor = c.points >= 5 ? '#FFD700' : '#38bdf8';
+                    floatingTexts.push(new FloatingText(c.x, c.y, `+${c.points}`, textColor));
+
+                    creatures.splice(i, 1);
+                    updateHUD();
+
+                    if (score >= TARGET_SCORE) {
+                        triggerVictory();
+                    }
+                    break;
+                }
+            }
+
+            if (!hit) {
+                soundFX.playMiss();
+            }
+
+            updateAccuracyUI();
+        }
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+
+        function updateHUD() {
+            document.getElementById('scoreText').innerText = score;
+            const pct = Math.min(100, (score / TARGET_SCORE) * 100);
+            document.getElementById('progressBar').style.width = `${pct}%`;
+        }
+
+        function updateAccuracyUI() {
+            const acc = totalShots > 0 ? Math.round((totalPops / totalShots) * 100) : 100;
+            document.getElementById('accuracyText').innerText = `${acc}%`;
+        }
+
+        // --- Controls ---
+        function startGame() {
+            score = 0;
+            totalShots = 0;
+            totalPops = 0;
+            elapsedTime = 0;
+            creatures = [];
+            sharks = [];
+            whales = [];
+            particles = [];
+            floatingTexts = [];
+            bubbleEffects = [];
+            
+            updateHUD();
+            updateAccuracyUI();
+
+            document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('victoryScreen').classList.add('hidden');
+            document.getElementById('pauseScreen').classList.add('hidden');
+
+            gameRunning = true;
+            isPaused = false;
+            startTime = performance.now();
+        }
+
+        function triggerVictory() {
+            gameRunning = false;
+            soundFX.playVictory();
+            createVictoryConfetti();
+
+            document.getElementById('finalTime').innerText = `${elapsedTime.toFixed(1)}s`;
+            const accuracy = totalShots > 0 ? Math.round((totalPops / totalShots) * 100) : 100;
+            document.getElementById('finalAccuracy').innerText = `${accuracy}%`;
+            document.getElementById('finalPopped').innerText = totalPops;
+            document.getElementById('finalShots').innerText = totalShots;
+
+            document.getElementById('victoryScreen').classList.remove('hidden');
+        }
+
+        // Button Event Listeners
+        document.getElementById('startGameBtn').addEventListener('click', () => {
+            soundFX.init();
+            startGame();
+        });
+
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            startGame();
+        });
+
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            if (!gameRunning) return;
+            isPaused = true;
+            document.getElementById('pauseScreen').classList.remove('hidden');
+        });
+
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            isPaused = false;
+            startTime = performance.now() - (elapsedTime * 1000);
+            document.getElementById('pauseScreen').classList.add('hidden');
+        });
+
+        document.getElementById('restartPauseBtn').addEventListener('click', () => {
+            startGame();
+        });
+
+        document.getElementById('soundBtn').addEventListener('click', () => {
+            soundFX.enabled = !soundFX.enabled;
+            const icon = document.getElementById('soundIcon');
+            if (soundFX.enabled) {
+                icon.className = 'fas fa-volume-up text-lg';
+            } else {
+                icon.className = 'fas fa-volume-mute text-lg text-rose-500';
+            }
+        });
+
+        // Initialize Loop
+        window.onload = function() {
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
